@@ -12,8 +12,7 @@
 (define (immediate? x) (or (integer? x) (char? x) (boolean? x) (null? x)))
 
 (define (emit-is-w0-equal-to val)
-  (define-label if-true)
-  (define-label end)
+  (define-label if-true end)
   (emit "cmp w0, #~a" (immediate-rep val))
   (emit "mov w0, #~a" (immediate-rep #f))
   (b.eq if-true)
@@ -37,8 +36,7 @@
        [(/) (emit "lsr w0, w0, #~a" fixnum-shift)
             (emit "sdiv w0, w8, w0")])]
     [(= < > <= >= char=?)
-     (define-label if-true)
-     (define-label end)
+     (define-label if-true end)
      (compile-expr (primitive-op-arg form 1) stack-index env)
      (when (eq? op 'char=?)
        (emit "lsr w0, w0, #~a" char-shift))
@@ -107,9 +105,7 @@
 
 (define (if? x) (eq? (car x) 'if))
 (define (compile-if test t-body f-body stack-index env)
-  (define-label if-true)
-  (define-label if-false)
-  (define-label end)
+  (define-label if-true if-false end)
   (compile-expr test stack-index env)
   (emit-is-w0-equal-to #t)
   (b.eq if-true)

@@ -21,6 +21,6 @@
        emits ...)])
 
 (define-syntax-parser define-label
-  [(_ label-name)
+  [(_ label-names ...)
    #'(begin
-       (define label-name (gensym 'LLB)))])
+       (define label-names (gensym 'LLB)) ...)])
