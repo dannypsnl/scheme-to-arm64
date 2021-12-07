@@ -22,51 +22,40 @@
   (emit "mov w0, #~a" (immediate-rep #t))
   (label end))
 (define (compile-primitive-call form stack-index)
-  (case (primitive-op form)
+  (define op (primitive-op form))
+  (case op
     [(+ - * /)
      (compile-expr (primitive-op-arg form 1) stack-index)
      (emit "str w0, [x29, #~a]" stack-index)
      (compile-expr (primitive-op-arg form 2) (- stack-index wordsize))
      (emit "ldr w8, [x29, #~a]" stack-index)
-     (case (primitive-op form)
+     (case op
        [(+) (emit "add w0, w8, w0")]
        [(-) (emit "sub w0, w8, w0")]
        [(*) (emit "lsr w0, w0, #~a" fixnum-shift)
             (emit "mul w0, w8, w0")]
        [(/) (emit "lsr w0, w0, #~a" fixnum-shift)
             (emit "sdiv w0, w8, w0")])]
-    [(= < > <= >=)
+    [(= < > <= >= char=?)
      (define-label if-true)
      (define-label end)
      (compile-expr (primitive-op-arg form 1) stack-index)
+     (when (eq? op 'char=?)
+       (emit "lsr w0, w0, #~a" char-shift))
      (emit "str w0, [x29, #~a]" stack-index)
      (compile-expr (primitive-op-arg form 2) (- stack-index wordsize))
      (emit "ldr w8, [x29, #~a]" stack-index)
+     (when (eq? op 'char=?)
+       (emit "lsr w0, w0, #~a" char-shift))
      (emit "cmp w0, w8")
      (emit "mov w0, #~a" (immediate-rep #f))
-     (case (primitive-op form)
+     (case op
        [(=) (b.eq if-true)]
        [(<) (b.lt if-true)]
        [(>) (b.gt if-true)]
        [(<=) (b.le if-true)]
-       [(>=) (b.ge if-true)])
-     (b end)
-     (label if-true)
-     (emit "mov w0, #~a" (immediate-rep #t))
-     (label end)]
-    [(char=?)
-     (define-label if-true)
-     (define-label end)
-     (compile-expr (primitive-op-arg form 1))
-     ; remove tag bits
-     (emit "lsr w0, w0, #~a" char-shift)
-     (emit "mov w8, w0")
-     (compile-expr (primitive-op-arg form 2))
-     ; remove tag bits
-     (emit "lsr w0, w0, #~a" char-shift)
-     (emit "cmp w8, w0")
-     (emit "mov w0, #~a" (immediate-rep #f))
-     (b.eq if-true)
+       [(>=) (b.ge if-true)]
+       [(char=?) (b.eq if-true)])
      (b end)
      (label if-true)
      (emit "mov w0, #~a" (immediate-rep #t))
