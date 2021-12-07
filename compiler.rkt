@@ -27,7 +27,7 @@
      (emit "mov w8, w0")
      (compile-expr (primitive-op-arg form 2))
      (emit "mov w9, w0")
-     (emit "add	w0, w8, w9")]
+     (emit "add w0, w8, w9")]
     [(-)
      (compile-expr (primitive-op-arg form 1))
      (emit "mov w8, w0")
@@ -54,8 +54,7 @@
      (compile-expr (primitive-op-arg form 1))
      (emit "mov w8, w0")
      (compile-expr (primitive-op-arg form 2))
-     (emit "mov w9, w0")
-     (emit "cmp w8, w9")
+     (emit "cmp w8, w0")
      (emit "mov w0, #~a" (immediate-rep #f))
      (case (primitive-op form)
        [(=) (b.eq if-true)]
