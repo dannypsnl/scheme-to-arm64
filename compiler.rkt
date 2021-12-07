@@ -10,9 +10,6 @@
 
 (define (immediate? x) (or (integer? x) (char? x) (boolean? x) (null? x)))
 
-; Get all arguments of a passed primcall form
-(define (primitive-op-args form) (cddr form))
-
 (define (emit-is-w0-equal-to val)
   (define if-true (symbol->string (gensym 'LLB)))
   (define if-false (symbol->string (gensym 'LLB)))
