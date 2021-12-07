@@ -106,5 +106,5 @@
 
 (define (compile-and-run program)
   (begin
-    (compile-to-binary (read (open-input-string program)))
+    (compile-to-binary program)
     (system "./a.out")))
