@@ -5,6 +5,7 @@
            "compiler.rkt")
 
   (define expression (make-parameter #f))
+  (define generate-asm (make-parameter #f))
 
   (command-line
    #:program "scheme"
@@ -13,9 +14,16 @@
    #:once-each
    [("-e" "--expr") e "run single scheme expression"
                     (expression (read (open-input-string e)))]
+   [("-s") "generate asm to file"
+           (generate-asm #t)]
    #:args args
-   (if (expression)
-       (void (compile-and-run (expression)))
+   (define program (expression))
+   (if program
+       (begin
+         (when (generate-asm)
+           (compile-program program))
+         (compile-and-run program)
+         (void))
        (match args
          [(list file)
           (define p (open-input-file file))

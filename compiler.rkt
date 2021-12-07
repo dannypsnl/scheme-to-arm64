@@ -21,13 +21,13 @@
   (label if-true)
   (emit "mov w0, #~a" (immediate-rep #t))
   (label end))
-(define (compile-primitive-call form stack-index)
+(define (compile-primitive-call form stack-index env)
   (define op (primitive-op form))
   (case op
     [(+ - * /)
-     (compile-expr (primitive-op-arg form 1) stack-index)
+     (compile-expr (primitive-op-arg form 1) stack-index env)
      (emit "str w0, [x29, #~a]" stack-index)
-     (compile-expr (primitive-op-arg form 2) (- stack-index wordsize))
+     (compile-expr (primitive-op-arg form 2) (- stack-index wordsize) env)
      (emit "ldr w8, [x29, #~a]" stack-index)
      (case op
        [(+) (emit "add w0, w8, w0")]
@@ -39,11 +39,11 @@
     [(= < > <= >= char=?)
      (define-label if-true)
      (define-label end)
-     (compile-expr (primitive-op-arg form 1) stack-index)
+     (compile-expr (primitive-op-arg form 1) stack-index env)
      (when (eq? op 'char=?)
        (emit "lsr w0, w0, #~a" char-shift))
      (emit "str w0, [x29, #~a]" stack-index)
-     (compile-expr (primitive-op-arg form 2) (- stack-index wordsize))
+     (compile-expr (primitive-op-arg form 2) (- stack-index wordsize) env)
      (emit "ldr w8, [x29, #~a]" stack-index)
      (when (eq? op 'char=?)
        (emit "lsr w0, w0, #~a" char-shift))
@@ -61,31 +61,56 @@
      (emit "mov w0, #~a" (immediate-rep #t))
      (label end)]
     [(add1)
-     (compile-expr (primitive-op-arg form 1) stack-index)
+     (compile-expr (primitive-op-arg form 1) stack-index env)
      (emit "add w0, w0, #~a" (immediate-rep 1))]
     [(sub1)
-     (compile-expr (primitive-op-arg form 1) stack-index)
+     (compile-expr (primitive-op-arg form 1) stack-index env)
      (emit "sub w0, w0, #~a" (immediate-rep 1))]
     [(integer?)
-     (compile-expr (primitive-op-arg form 1) stack-index)
+     (compile-expr (primitive-op-arg form 1) stack-index env)
      (emit "and w0, w0, #~a" fixnum-mask)
      (emit-is-w0-equal-to 0)]
     [(boolean?)
-     (compile-expr (primitive-op-arg form 1) stack-index)
+     (compile-expr (primitive-op-arg form 1) stack-index env)
      (emit "and w0, w0, #~a" bool-mask)
      (emit-is-w0-equal-to bool-tag)]
     [(char?)
-     (compile-expr (primitive-op-arg form 1) stack-index)
+     (compile-expr (primitive-op-arg form 1) stack-index env)
      (emit "and w0, w0, #~a" char-mask)
      (emit-is-w0-equal-to char-tag)]
     [(zero?)
-     (compile-expr (primitive-op-arg form 1) stack-index)
+     (compile-expr (primitive-op-arg form 1) stack-index env)
      (emit-is-w0-equal-to 0)]))
-(define (compile-expr e stack-index)
+
+(define (let? x) (eq? (car x) 'let))
+(define (compile-let bindings body stack-index env)
+  (let* ([stack-offsets
+          (map (lambda (x) (- stack-index (* x wordsize)))
+               (range 0 (length bindings)))]
+         [names (map car bindings)]
+         [exprs (map cadr bindings)]
+         [inner-si (- stack-index (* (length bindings) wordsize))]
+         [inner-env (append (map cons names stack-offsets) env)])
+    ; evaluate exprs and assign them to stack locations
+    (for ([expr exprs]
+          [offset stack-offsets])
+      (compile-expr expr inner-si env)
+      (emit "str w0, [x29, #~a]" offset))
+
+    ; evaluate all body forms - this will leave the last one's output in %eax
+    (for ([form body])
+      (compile-expr form inner-si inner-env))))
+
+(define (variable? x) (symbol? x))
+(define (compile-var-load v stack-index env)
+  (emit "ldr w0, [x29, #~a]" (cdr (assoc v env))))
+
+(define (compile-expr e stack-index env)
   (cond
-    [(immediate? e)
-     (emit "mov w0, #~a" (immediate-rep e))]
-    [(primitive-call? e) (compile-primitive-call e stack-index)]))
+    [(immediate? e) (emit "mov w0, #~a" (immediate-rep e))]
+    [(variable? e) (compile-var-load e stack-index env)]
+    [(let? e) (compile-let (cadr e) (cddr e) stack-index env)]
+    [(primitive-call? e) (compile-primitive-call e stack-index env)]))
 
 (define (compile-program program)
   (emit ".section __TEXT,__text,regular,pure_instructions")
@@ -95,7 +120,7 @@
 
   (emit "stp x29, x30, [sp, #-16]!")
   (emit "mov x29, sp")
-  (compile-expr program (- wordsize))
+  (compile-expr program (- wordsize) '())
   (emit "ret"))
 
 (define (compile-to-binary program)
