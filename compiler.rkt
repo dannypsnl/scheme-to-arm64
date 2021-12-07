@@ -105,10 +105,30 @@
 (define (compile-var-load v stack-index env)
   (emit "ldr w0, [x29, #~a]" (cdr (assoc v env))))
 
+(define (if? x) (eq? (car x) 'if))
+(define (compile-if test t-body f-body stack-index env)
+  (define-label if-true)
+  (define-label if-false)
+  (define-label end)
+  (compile-expr test stack-index env)
+  (emit-is-w0-equal-to #t)
+  (b.eq if-true)
+  (b if-false)
+  (label if-true
+         (compile-expr t-body stack-index env)
+         (b end))
+  (label if-false
+         (compile-expr f-body stack-index env)
+         (b end))
+  (label end))
+
 (define (compile-expr e stack-index env)
   (cond
     [(immediate? e) (emit "mov w0, #~a" (immediate-rep e))]
     [(variable? e) (compile-var-load e stack-index env)]
+    [(if? e) (compile-if (cadr e) (caddr e)
+                         (if (null? (cdddr e)) #f (cadddr e))
+                         stack-index env)]
     [(let? e) (compile-let (cadr e) (cddr e) stack-index env)]
     [(primitive-call? e) (compile-primitive-call e stack-index env)]))
 
