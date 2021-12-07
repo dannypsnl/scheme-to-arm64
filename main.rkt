@@ -21,7 +21,9 @@
    (if program
        (begin
          (when (generate-asm)
-           (compile-program program))
+           (with-output-to-file "debug.s"
+             #:exists 'replace
+             (lambda () (compile-program program))))
          (compile-and-run program)
          (void))
        (run args))))
