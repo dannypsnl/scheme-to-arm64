@@ -7,13 +7,16 @@
   (apply printf args)
   (newline))
 
+(define (compile-expr e)
+  (emit "mov w0, #~a" e))
+
 (define (compile-program program)
   (emit ".section __TEXT,__text,regular,pure_instructions")
   (emit ".p2align 2")
   (emit ".globl _scheme_entry")
   (emit "_scheme_entry:")
 
-  (emit "mov w0, #42")
+  (compile-expr program)
   (emit "ret")
   )
 
