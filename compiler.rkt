@@ -69,5 +69,6 @@
   (system "gcc /tmp/scheme.s rts.c"))
 
 (define (compile-and-run program)
-  (begin (compile-to-binary (read (open-input-string program)))
-         (system "./a.out")))
+  (begin
+    (compile-to-binary (read (open-input-string program)))
+    (system "./a.out")))
