@@ -5,13 +5,10 @@
          compile-and-run)
 
 (require "emit.rkt"
-         "representation.rkt")
+         "representation.rkt"
+         "primitive.rkt")
 
 (define (immediate? x) (or (integer? x) (char? x) (boolean? x) (null? x)))
-(define (primitive-call? form) (eq? 'primcall (car form)))
-(define (primitive-op form) (cadr form))
-(define (primitive-op-arg1 form) (caddr form))
-(define (primitive-op-arg2 form) (cadddr form))
 
 ; Get all arguments of a passed primcall form
 (define (primitive-op-args form) (cddr form))
