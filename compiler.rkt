@@ -1,7 +1,8 @@
 #lang racket
 
 (provide compile-program
-         compile-to-binary)
+         compile-to-binary
+         compile-and-run)
 
 (define (emit . args)
   (apply printf args)
@@ -25,3 +26,7 @@
     #:exists 'replace
     (lambda () (compile-program program)))
   (system "gcc /tmp/scheme.s rts.c"))
+
+(define (compile-and-run program)
+  (begin (compile-to-binary program)
+         (system "./a.out")))
