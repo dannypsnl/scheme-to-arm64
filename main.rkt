@@ -24,11 +24,14 @@
            (compile-program program))
          (compile-and-run program)
          (void))
-       (match args
-         [(list file)
-          (define p (open-input-file file))
-          (let loop ([s (read file p)])
-            (when (not (eof-object? s))
-              (displayln s)
-              (loop (read file p))))]
-         [_ (printf "please provide a file~n")]))))
+       (run args))))
+
+(define (run args)
+  (match args
+    [(list file)
+     (define p (open-input-file file))
+     (let loop ([s (read file p)])
+       (when (not (eof-object? s))
+         (displayln s)
+         (loop (read file p))))]
+    [_ (printf "please provide a file~n")]))
