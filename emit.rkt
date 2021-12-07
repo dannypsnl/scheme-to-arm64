@@ -18,4 +18,4 @@
 (define-syntax-parser define-label
   [(_ label-name)
    #'(begin
-       (define label-name (symbol->string (gensym 'LLB))))])
+       (define label-name (gensym 'LLB)))])
