@@ -4,12 +4,7 @@
          compile-to-binary
          compile-and-run)
 
-(define (emit . args)
-  (apply printf args)
-  (newline))
-(define (label name) (emit "~a:" name))
-(define (b.eq label) (emit "b.eq ~a" label))
-(define (b label) (emit "b ~a" label))
+(require "emit.rkt")
 
 (define fixnum-shift 2)
 (define fixnum-mask 3)
