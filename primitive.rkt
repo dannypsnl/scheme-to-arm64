@@ -3,7 +3,13 @@
 (provide (all-defined-out))
 
 (define primitive-functions
-  '(add1
+  '(+
+    -
+    *
+    /
+    ; comparison operators
+    = < > <= >= char=?
+    add1
     sub1
     integer?
     boolean?
