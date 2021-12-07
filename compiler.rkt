@@ -37,8 +37,28 @@
          (bitwise-ior (arithmetic-shift 1 bool-shift) bool-tag)
          bool-tag)]))
 
+(define (immediate? x) (or (integer? x) (char? x) (boolean? x) (null? x)))
+(define (primitive-call? form) (eq? 'primcall (car form)))
+(define (primitive-op form) (cadr form))
+(define (primitive-op-arg1 form) (caddr form))
+(define (primitive-op-arg2 form) (cadddr form))
+
+; Get all arguments of a passed primcall form
+(define (primitive-op-args form) (cddr form))
+
+(define (compile-primitive-call form)
+  (case (primitive-op form)
+    [(add1)
+     (compile-expr (primitive-op-arg1 form))
+     (emit "add w0, w0, #~a" (immediate-rep 1))]
+    [(sub1)
+     (compile-expr (primitive-op-arg1 form))
+     (emit "sub w0, w0, #~a" (immediate-rep 1))]))
 (define (compile-expr e)
-  (emit "mov w0, #~a" (immediate-rep e)))
+  (cond
+    [(immediate? e)
+     (emit "mov w0, #~a" (immediate-rep e))]
+    [(primitive-call? e) (compile-primitive-call e)]))
 
 (define (compile-program program)
   (emit ".section __TEXT,__text,regular,pure_instructions")
@@ -47,8 +67,7 @@
   (emit "_scheme_entry:")
 
   (compile-expr program)
-  (emit "ret")
-  )
+  (emit "ret"))
 
 (define (compile-to-binary program)
   (with-output-to-file "/tmp/scheme.s"
