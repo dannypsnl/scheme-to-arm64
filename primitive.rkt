@@ -1,4 +1,4 @@
-#lang racket/base
+#lang racket
 
 (provide (all-defined-out))
 
@@ -13,5 +13,4 @@
   (member (car form)
           primitive-functions))
 (define (primitive-op form) (car form))
-(define (primitive-op-arg1 form) (cadr form))
-(define (primitive-op-arg2 form) (caddr form))
+(define (primitive-op-arg form index) (list-ref form index))
