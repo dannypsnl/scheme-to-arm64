@@ -79,7 +79,6 @@
      (compile-expr (list-ref args 0) stack-index env)
      (emit-is-w0-equal-to 0)]))
 
-(define (let? x) (eq? (car x) 'let))
 (define (compile-let names exprs body stack-index env)
   (let* ([stack-offsets
           (map (lambda (x) (- stack-index (* x wordsize)))
@@ -100,7 +99,6 @@
 (define (compile-var-load v stack-index env)
   (emit "ldr w0, [x29, #~a]" (cdr (assoc v env))))
 
-(define (if? x) (eq? (car x) 'if))
 (define (compile-if test t-body f-body stack-index env)
   (define-label if-true if-false end)
   (compile-expr test stack-index env)
