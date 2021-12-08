@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: Bogdanp/setup-racket@v1.7
         with:
-          architecture: arm64
+          architecture: "arm64"
           distribution: full
           variant: ${{ matrix.racket-variant }}
           version: ${{ matrix.racket-version }}
