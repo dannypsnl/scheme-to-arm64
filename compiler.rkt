@@ -135,7 +135,10 @@
      (compile-cond tests bodys stack-index env)]
     [`(let ([,ids ,exprs] ...) ,bodys ...)
      (compile-let ids exprs bodys stack-index env)]
-    [`(,op ,args ...) (compile-primitive-call op args stack-index env)]))
+    [`(,op ,args ...)
+     #:when (member op primitive-functions)
+     (compile-primitive-call op args stack-index env)]
+    [else (error "unkown expression ~a" e)]))
 
 (define (compile-program program)
   (emit ".section __TEXT,__text,regular,pure_instructions")
