@@ -43,5 +43,4 @@ int main(int argc, const char **argv) {
   int val = scheme_entry();
   show(val);
   printf("\n");
-  return 0;
 }
