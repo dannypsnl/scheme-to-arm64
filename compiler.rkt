@@ -156,22 +156,20 @@
   (system "gcc /tmp/scheme.s rts.c"))
 
 (define (compile-and-run program)
-  (begin
-    (compile-to-binary program)
-    (system "./a.out")))
+  (compile-to-binary program)
+  (match-define (list stdout stdin status stderr do)
+    (process "./a.out"))
+  (do 'wait)
+  (read stdout))
 
 (module+ test
   (require rackunit)
 
-  (define (expr->asm e)
-    (with-output-to-file "/tmp/test.s"
-      #:exists 'replace
-      (lambda () (compile-expr e (- wordsize) '())))
-    (file->lines "/tmp/test.s"))
-
-  (check-equal? (expr->asm '1)
-                '("mov w0, #4"))
-  (check-equal? (expr->asm '(add1 1))
-                '("mov w0, #4"
-                  "add w0, w0, #4"))
+  (check-equal? (compile-and-run '1) 1)
+  (check-equal? (compile-and-run '(add1 1)) 2)
+  (check-equal? (compile-and-run '(if #f 1)) #f)
+  (check-equal? (compile-and-run '(if #t 1)) 1)
+  (check-equal? (compile-and-run '(if #t 1 2)) 1)
+  (check-equal? (compile-and-run '(if #f 1 2)) 2)
+  (check-equal? (compile-and-run '(let ([x 1]) x)) 1)
   )

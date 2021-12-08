@@ -24,8 +24,7 @@
            (with-output-to-file "debug.s"
              #:exists 'replace
              (lambda () (compile-program program))))
-         (compile-and-run program)
-         (void))
+         (displayln (compile-and-run program)))
        (run args))))
 
 (define (run args)
