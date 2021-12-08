@@ -44,7 +44,7 @@
      (emit "ldr w8, [x29, #~a]" stack-index)
      (when (eq? op 'char=?)
        (emit "lsr w0, w0, #~a" char-shift))
-     (emit "cmp w0, w8")
+     (emit "cmp w8, w0")
      (case op
        [(=) (b.eq if-true)]
        [(<) (b.lt if-true)]
@@ -182,4 +182,18 @@
   (check-equal? (compile-and-run '(boolean? 1)) #f)
   (check-equal? (compile-and-run '(integer? 1)) #t)
   (check-equal? (compile-and-run '(integer? #f)) #f)
+  (check-equal? (compile-and-run '(cond
+                                    [(= (- 2 1) 1) 1]
+                                    [#t 2]))
+                1)
+  (check-equal? (compile-and-run '(<= (sub1 10) (* 9 (/ 4 2)))) #t)
+  (check-equal? (compile-and-run '(> 2 1)) #t)
+  (check-equal? (compile-and-run '(>= 2 2)) #t)
+  (check-equal? (compile-and-run '(>= 3 2)) #t)
+  (check-equal? (compile-and-run '(>= 2 3)) #f)
+  (check-equal? (compile-and-run '(< 2 1)) #f)
+  (check-equal? (compile-and-run '(<= 2 1)) #f)
+  (check-equal? (compile-and-run '(<= 2 2)) #t)
+  (check-equal? (compile-and-run '(zero? 0)) #t)
+  (check-equal? (compile-and-run '(zero? #\c)) #f)
   )
