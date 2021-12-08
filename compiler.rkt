@@ -119,14 +119,14 @@
   (label end))
 
 (define (compile-expr e stack-index env)
-  (cond
-    [(immediate? e) (emit "mov w0, #~a" (immediate-rep e))]
-    [(variable? e) (compile-var-load e stack-index env)]
-    [(if? e) (compile-if (cadr e) (caddr e)
-                         (if (null? (cdddr e)) #f (cadddr e))
-                         stack-index env)]
-    [(let? e) (compile-let (cadr e) (cddr e) stack-index env)]
-    [(primitive-call? e) (compile-primitive-call e stack-index env)]))
+  (match e
+    [(? immediate? e) (emit "mov w0, #~a" (immediate-rep e))]
+    [(? variable? e) (compile-var-load e stack-index env)]
+    [(? if? e) (compile-if (cadr e) (caddr e)
+                           (if (null? (cdddr e)) #f (cadddr e))
+                           stack-index env)]
+    [(? let? e) (compile-let (cadr e) (cddr e) stack-index env)]
+    [(? primitive-call? e) (compile-primitive-call e stack-index env)]))
 
 (define (compile-program program)
   (emit ".section __TEXT,__text,regular,pure_instructions")
@@ -149,3 +149,30 @@
   (begin
     (compile-to-binary program)
     (system "./a.out")))
+
+(module+ test
+  (require rackunit)
+
+  (define (expr->asm e)
+    (with-output-to-file "/tmp/test.s"
+      #:exists 'replace
+      (lambda () (compile-expr e (- wordsize) '())))
+    (file->lines "/tmp/test.s"))
+
+  (check-equal? (expr->asm '1)
+                '("mov w0, #4"))
+  (check-equal? (expr->asm '(add1 1))
+                '("mov w0, #4"
+                  "add w0, w0, #4"))
+  (check-equal? (expr->asm '(= 1 1))
+                '("mov w0, #4"
+                  "str w0, [x29, #-4]"
+                  "mov w0, #4"
+                  "ldr w8, [x29, #-4]"
+                  "cmp w0, w8"
+                  "b.eq LLB2256"
+                  "mov w0, #15"
+                  "b LLB2257"
+                  "LLB2256:"
+                  "mov w0, #271"
+                  "LLB2257:")))
