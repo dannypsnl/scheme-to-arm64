@@ -8,6 +8,7 @@
   (apply printf args)
   (newline))
 (define (b.eq label) (emit "b.eq ~a" label))
+(define (b.ne label) (emit "b.ne ~a" label))
 (define (b.lt label) (emit "b.lt ~a" label))
 (define (b.le label) (emit "b.le ~a" label))
 (define (b.gt label) (emit "b.gt ~a" label))

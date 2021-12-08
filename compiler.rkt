@@ -110,12 +110,29 @@
          (compile-expr t-body stack-index env))
   (label end))
 
+(define (compile-cond tests bodys stack-index env)
+  (define-label end)
+  (for ([test tests]
+        [exprs bodys])
+    (define-label body-tag next)
+    (compile-expr test stack-index env)
+    (emit-is-w0-equal-to #t)
+    (b.ne next)
+    (label body-tag
+           (for ([expr exprs])
+             (compile-expr expr stack-index env))
+           (b end))
+    (label next))
+  (label end))
+
 (define (compile-expr e stack-index env)
   (match e
     [(? immediate? e) (emit "mov w0, #~a" (immediate-rep e))]
     [(? variable? e) (compile-var-load e stack-index env)]
     [`(if ,test ,t-body) (compile-if test t-body #f stack-index env)]
     [`(if ,test ,t-body ,f-body) (compile-if test t-body f-body stack-index env)]
+    [`(cond (,tests ,bodys ...) ...)
+     (compile-cond tests bodys stack-index env)]
     [`(let ([,ids ,exprs] ...) ,bodys ...)
      (compile-let ids exprs bodys stack-index env)]
     [`(,op ,args ...) (compile-primitive-call op args stack-index env)]))
