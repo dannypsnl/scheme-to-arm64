@@ -100,17 +100,14 @@
   (emit "ldr w0, [x29, #~a]" (cdr (assoc v env))))
 
 (define (compile-if test t-body f-body stack-index env)
-  (define-label if-true if-false end)
+  (define-label if-true end)
   (compile-expr test stack-index env)
   (emit-is-w0-equal-to #t)
   (b.eq if-true)
-  (b if-false)
+  (compile-expr f-body stack-index env)
+  (b end)
   (label if-true
-         (compile-expr t-body stack-index env)
-         (b end))
-  (label if-false
-         (compile-expr f-body stack-index env)
-         (b end))
+         (compile-expr t-body stack-index env))
   (label end))
 
 (define (compile-expr e stack-index env)
@@ -177,25 +174,22 @@
                   "mov w0, #4"
                   "ldr w8, [x29, #-4]"
                   "cmp w0, w8"
-                  "b.eq LLB2969"
+                  "b.eq LLB2968"
                   "mov w0, #15"
-                  "b LLB2970"
+                  "b LLB2969"
+                  "LLB2968:"
+                  "mov w0, #271"
                   "LLB2969:"
-                  "mov w0, #271"
-                  "LLB2970:"
                   "cmp w0, #271"
-                  "b.eq LLB2971"
+                  "b.eq LLB2970"
                   "mov w0, #15"
-                  "b LLB2972"
-                  "LLB2971:"
+                  "b LLB2971"
+                  "LLB2970:"
                   "mov w0, #271"
-                  "LLB2972:"
+                  "LLB2971:"
                   "b.eq LLB2966"
+                  "mov w0, #15"
                   "b LLB2967"
                   "LLB2966:"
                   "mov w0, #4"
-                  "b LLB2968"
-                  "LLB2967:"
-                  "mov w0, #15"
-                  "b LLB2968"
-                  "LLB2968:")))
+                  "LLB2967:")))
