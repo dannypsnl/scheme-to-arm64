@@ -14,8 +14,8 @@
 (define (emit-is-w0-equal-to val)
   (define-label if-true end)
   (emit "cmp w0, #~a" (immediate-rep val))
-  (emit "mov w0, #~a" (immediate-rep #f))
   (b.eq if-true)
+  (emit "mov w0, #~a" (immediate-rep #f))
   (b end)
   (label if-true)
   (emit "mov w0, #~a" (immediate-rep #t))
@@ -46,7 +46,6 @@
      (when (eq? op 'char=?)
        (emit "lsr w0, w0, #~a" char-shift))
      (emit "cmp w0, w8")
-     (emit "mov w0, #~a" (immediate-rep #f))
      (case op
        [(=) (b.eq if-true)]
        [(<) (b.lt if-true)]
@@ -54,6 +53,7 @@
        [(<=) (b.le if-true)]
        [(>=) (b.ge if-true)]
        [(char=?) (b.eq if-true)])
+     (emit "mov w0, #~a" (immediate-rep #f))
      (b end)
      (label if-true)
      (emit "mov w0, #~a" (immediate-rep #t))
