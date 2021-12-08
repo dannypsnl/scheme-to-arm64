@@ -20,13 +20,12 @@
   (label if-true)
   (emit "mov w0, #~a" (immediate-rep #t))
   (label end))
-(define (compile-primitive-call form stack-index env)
-  (define op (primitive-op form))
+(define (compile-primitive-call op args stack-index env)
   (case op
     [(+ - * /)
-     (compile-expr (primitive-op-arg form 1) stack-index env)
+     (compile-expr (list-ref args 0) stack-index env)
      (emit "str w0, [x29, #~a]" stack-index)
-     (compile-expr (primitive-op-arg form 2) (- stack-index wordsize) env)
+     (compile-expr (list-ref args 1) (- stack-index wordsize) env)
      (emit "ldr w8, [x29, #~a]" stack-index)
      (case op
        [(+) (emit "add w0, w8, w0")]
@@ -37,11 +36,11 @@
             (emit "sdiv w0, w8, w0")])]
     [(= < > <= >= char=?)
      (define-label if-true end)
-     (compile-expr (primitive-op-arg form 1) stack-index env)
+     (compile-expr (list-ref args 0) stack-index env)
      (when (eq? op 'char=?)
        (emit "lsr w0, w0, #~a" char-shift))
      (emit "str w0, [x29, #~a]" stack-index)
-     (compile-expr (primitive-op-arg form 2) (- stack-index wordsize) env)
+     (compile-expr (list-ref args 1) (- stack-index wordsize) env)
      (emit "ldr w8, [x29, #~a]" stack-index)
      (when (eq? op 'char=?)
        (emit "lsr w0, w0, #~a" char-shift))
@@ -59,35 +58,33 @@
      (emit "mov w0, #~a" (immediate-rep #t))
      (label end)]
     [(add1)
-     (compile-expr (primitive-op-arg form 1) stack-index env)
+     (compile-expr (list-ref args 0) stack-index env)
      (emit "add w0, w0, #~a" (immediate-rep 1))]
     [(sub1)
-     (compile-expr (primitive-op-arg form 1) stack-index env)
+     (compile-expr (list-ref args 0) stack-index env)
      (emit "sub w0, w0, #~a" (immediate-rep 1))]
     [(integer?)
-     (compile-expr (primitive-op-arg form 1) stack-index env)
+     (compile-expr (list-ref args 0) stack-index env)
      (emit "and w0, w0, #~a" fixnum-mask)
      (emit-is-w0-equal-to 0)]
     [(boolean?)
-     (compile-expr (primitive-op-arg form 1) stack-index env)
+     (compile-expr (list-ref args 0) stack-index env)
      (emit "and w0, w0, #~a" bool-mask)
      (emit-is-w0-equal-to bool-tag)]
     [(char?)
-     (compile-expr (primitive-op-arg form 1) stack-index env)
+     (compile-expr (list-ref args 0) stack-index env)
      (emit "and w0, w0, #~a" char-mask)
      (emit-is-w0-equal-to char-tag)]
     [(zero?)
-     (compile-expr (primitive-op-arg form 1) stack-index env)
+     (compile-expr (list-ref args 0) stack-index env)
      (emit-is-w0-equal-to 0)]))
 
 (define (let? x) (eq? (car x) 'let))
-(define (compile-let bindings body stack-index env)
+(define (compile-let names exprs body stack-index env)
   (let* ([stack-offsets
           (map (lambda (x) (- stack-index (* x wordsize)))
-               (range 0 (length bindings)))]
-         [names (map car bindings)]
-         [exprs (map cadr bindings)]
-         [inner-si (- stack-index (* (length bindings) wordsize))]
+               (range 0 (length names)))]
+         [inner-si (- stack-index (* (length names) wordsize))]
          [inner-env (append (map cons names stack-offsets) env)])
     ; evaluate exprs and assign them to stack locations
     (for ([expr exprs]
@@ -122,11 +119,11 @@
   (match e
     [(? immediate? e) (emit "mov w0, #~a" (immediate-rep e))]
     [(? variable? e) (compile-var-load e stack-index env)]
-    [(? if? e) (compile-if (cadr e) (caddr e)
-                           (if (null? (cdddr e)) #f (cadddr e))
-                           stack-index env)]
-    [(? let? e) (compile-let (cadr e) (cddr e) stack-index env)]
-    [(? primitive-call? e) (compile-primitive-call e stack-index env)]))
+    [`(if ,test ,t-body) (compile-if test t-body #f stack-index env)]
+    [`(if ,test ,t-body ,f-body) (compile-if test t-body f-body stack-index env)]
+    [`(let ([,ids ,exprs] ...) ,bodys ...)
+     (compile-let ids exprs bodys stack-index env)]
+    [`(,op ,args ...) (compile-primitive-call op args stack-index env)]))
 
 (define (compile-program program)
   (emit ".section __TEXT,__text,regular,pure_instructions")
@@ -170,9 +167,37 @@
                   "mov w0, #4"
                   "ldr w8, [x29, #-4]"
                   "cmp w0, w8"
-                  "b.eq LLB2256"
+                  "b.eq LLB2964"
                   "mov w0, #15"
-                  "b LLB2257"
-                  "LLB2256:"
+                  "b LLB2965"
+                  "LLB2964:"
                   "mov w0, #271"
-                  "LLB2257:")))
+                  "LLB2965:"))
+  (check-equal? (expr->asm '(if (= 1 1) 1))
+                '("mov w0, #4"
+                  "str w0, [x29, #-4]"
+                  "mov w0, #4"
+                  "ldr w8, [x29, #-4]"
+                  "cmp w0, w8"
+                  "b.eq LLB2969"
+                  "mov w0, #15"
+                  "b LLB2970"
+                  "LLB2969:"
+                  "mov w0, #271"
+                  "LLB2970:"
+                  "cmp w0, #271"
+                  "b.eq LLB2971"
+                  "mov w0, #15"
+                  "b LLB2972"
+                  "LLB2971:"
+                  "mov w0, #271"
+                  "LLB2972:"
+                  "b.eq LLB2966"
+                  "b LLB2967"
+                  "LLB2966:"
+                  "mov w0, #4"
+                  "b LLB2968"
+                  "LLB2967:"
+                  "mov w0, #15"
+                  "b LLB2968"
+                  "LLB2968:")))
