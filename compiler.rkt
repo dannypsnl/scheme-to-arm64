@@ -176,40 +176,4 @@
   (check-equal? (expr->asm '(add1 1))
                 '("mov w0, #4"
                   "add w0, w0, #4"))
-  (check-equal? (expr->asm '(= 1 1))
-                '("mov w0, #4"
-                  "str w0, [x29, #-4]"
-                  "mov w0, #4"
-                  "ldr w8, [x29, #-4]"
-                  "cmp w0, w8"
-                  "b.eq LLB2964"
-                  "mov w0, #15"
-                  "b LLB2965"
-                  "LLB2964:"
-                  "mov w0, #271"
-                  "LLB2965:"))
-  (check-equal? (expr->asm '(if (= 1 1) 1))
-                '("mov w0, #4"
-                  "str w0, [x29, #-4]"
-                  "mov w0, #4"
-                  "ldr w8, [x29, #-4]"
-                  "cmp w0, w8"
-                  "b.eq LLB2968"
-                  "mov w0, #15"
-                  "b LLB2969"
-                  "LLB2968:"
-                  "mov w0, #271"
-                  "LLB2969:"
-                  "cmp w0, #271"
-                  "b.eq LLB2970"
-                  "mov w0, #15"
-                  "b LLB2971"
-                  "LLB2970:"
-                  "mov w0, #271"
-                  "LLB2971:"
-                  "b.eq LLB2966"
-                  "mov w0, #15"
-                  "b LLB2967"
-                  "LLB2966:"
-                  "mov w0, #4"
-                  "LLB2967:")))
+  )
