@@ -5,25 +5,21 @@
            "compiler.rkt")
 
   (define expression (make-parameter #f))
-  (define generate-asm (make-parameter #f))
+  (define show-asm (make-parameter #f))
 
   (command-line
    #:program "scheme"
    #:usage-help
    "scheme is a scheme compiler"
    #:once-each
-   [("-e" "--expr") e "run single scheme expression"
-                    (expression (read (open-input-string e)))]
-   [("-s") "generate asm to file"
-           (generate-asm #t)]
+   [("-e" "--expr") e "run single scheme expression" (expression (read (open-input-string e)))]
+   [("-s") "show asm" (show-asm #t)]
    #:args args
    (define program (expression))
    (if program
        (begin
-         (when (generate-asm)
-           (with-output-to-file "debug.s"
-             #:exists 'replace
-             (lambda () (compile-program program))))
+         (when (show-asm)
+           (compile-program program))
          (displayln (compile-and-run program)))
        (run args))))
 
