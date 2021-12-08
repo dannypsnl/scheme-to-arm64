@@ -146,8 +146,6 @@
   (emit ".globl _scheme_entry")
   (emit "_scheme_entry:")
 
-  (emit "stp x29, x30, [sp, #-16]!")
-  (emit "mov x29, sp")
   (compile-expr program (- wordsize) '())
   (emit "ret"))
 
