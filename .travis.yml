@@ -1,0 +1,22 @@
+os: linux
+arch: arm64
+
+language: racket
+
+env:
+ - RACKET_VERSION=8.3
+
+before_install:
+- git clone https://github.com/greghendershott/travis-racket.git
+- cat travis-racket/install-racket.sh | bash # pipe to bash not sh!
+
+install:
+
+before_script:
+
+script:
+ - /usr/racket/bin/raco pkg install --auto
+ - /usr/racket/bin/raco test -x .
+
+after_script:
+
