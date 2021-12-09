@@ -21,4 +21,4 @@
 #define SYM_TAG 5
 #define CLOSURE_TAG 6
 
-void show(int x);
+void show(long x);

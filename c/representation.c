@@ -1,9 +1,9 @@
 #include "representation.h"
 
-void show(int x) {
+void show(long x) {
   if ((x & FIXNUM_MASK) == FIXNUM_TAG) {
     // integer
-    printf("%d", x >> FIXNUM_SHIFT);
+    printf("%ld", x >> FIXNUM_SHIFT);
   } else if ((x & CHAR_MASK) == CHAR_TAG) {
     // character
     printf("#\\%c", (char)(x >> CHAR_SHIFT));
@@ -15,23 +15,21 @@ void show(int x) {
       printf("#f");
     }
   } else if ((x & PTR_MASK) == PAIR_TAG) {
-    int *ptr = (int *)(size_t)(x - PAIR_TAG);
+    int *ptr = (int *)(long)(x - PAIR_TAG);
     if (ptr == NULL) {
       printf("()");
       return;
     }
 
-    printf("   r: %p\n", ptr);
     // either a list or a dotted pair
     int car = ptr[0];
-    printf("   r: %p\n", ptr);
     int cdr = ptr[1];
     putchar('(');
     show(car);
 
     // show additional space-separated elems
     while ((cdr & PTR_MASK) == PAIR_TAG) {
-      ptr = (int *)(size_t)(cdr - PAIR_TAG);
+      ptr = (int *)(long)(cdr - PAIR_TAG);
       if (ptr == NULL)
         break;
 
@@ -48,6 +46,6 @@ void show(int x) {
     }
     putchar(')');
   } else {
-    printf("bad: %d", x);
+    printf("bad: %ld", x);
   }
 }
