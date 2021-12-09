@@ -33,12 +33,12 @@
      (emit "orr x0, x0, #~a" pair-tag)
      ; we used two wordsize from heap
      (emit "add x28, x28, #~a" (* 2 wordsize))]
-    [(null? car cdr)
+    [(add1)
      (compile-expr (list-ref args 0) stack-index env)
-     (case op
-       [(car) (emit "ldr x0, [x0, #~a]" (- pair-tag))]
-       [(cdr) (emit "ldr x0, [x0, #~a]" (- wordsize pair-tag))]
-       [(null?) (emit-is-x0-equal-to pair-tag)])]
+     (emit "add x0, x0, #~a" (immediate-rep 1))]
+    [(sub1)
+     (compile-expr (list-ref args 0) stack-index env)
+     (emit "sub x0, x0, #~a" (immediate-rep 1))]
     [(+ - * /)
      (compile-expr (list-ref args 0) stack-index env)
      (emit "str x0, [x29, #~a]" stack-index)
@@ -74,12 +74,6 @@
      (label if-true)
      (emit "mov x0, #~a" (immediate-rep #t))
      (label end)]
-    [(add1)
-     (compile-expr (list-ref args 0) stack-index env)
-     (emit "add x0, x0, #~a" (immediate-rep 1))]
-    [(sub1)
-     (compile-expr (list-ref args 0) stack-index env)
-     (emit "sub x0, x0, #~a" (immediate-rep 1))]
     [(integer?)
      (compile-expr (list-ref args 0) stack-index env)
      (emit "and x0, x0, #~a" fixnum-mask)
@@ -94,7 +88,13 @@
      (emit-is-x0-equal-to char-tag)]
     [(zero?)
      (compile-expr (list-ref args 0) stack-index env)
-     (emit-is-x0-equal-to 0)]))
+     (emit-is-x0-equal-to 0)]
+    [(null? car cdr)
+     (compile-expr (list-ref args 0) stack-index env)
+     (case op
+       [(car) (emit "ldr x0, [x0, #~a]" (- pair-tag))]
+       [(cdr) (emit "ldr x0, [x0, #~a]" (- wordsize pair-tag))]
+       [(null?) (emit-is-x0-equal-to pair-tag)])]))
 
 (define (compile-let names exprs body stack-index env)
   (let* ([stack-offsets
