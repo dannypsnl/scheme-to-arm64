@@ -102,21 +102,20 @@
      (label if-true)
      (emit "mov x0, #~a" (immediate-rep #t))
      (label end)]
-    [(integer?)
+    [(integer? boolean? char? string? vector? zero?)
      (compile-expr (list-ref args 0) stack-index env)
-     (emit "and x0, x0, #~a" fixnum-mask)
-     (emit-is-x0-equal-to 0)]
-    [(boolean?)
-     (compile-expr (list-ref args 0) stack-index env)
-     (emit "and x0, x0, #~a" bool-mask)
-     (emit-is-x0-equal-to bool-tag)]
-    [(char?)
-     (compile-expr (list-ref args 0) stack-index env)
-     (emit "and x0, x0, #~a" char-mask)
-     (emit-is-x0-equal-to char-tag)]
-    [(zero?)
-     (compile-expr (list-ref args 0) stack-index env)
-     (emit-is-x0-equal-to 0)]
+     (case op
+       [(integer?) (emit "and x0, x0, #~a" fixnum-mask)
+                   (emit-is-x0-equal-to 0)]
+       [(boolean?) (emit "and x0, x0, #~a" bool-mask)
+                   (emit-is-x0-equal-to bool-tag)]
+       [(char?) (emit "and x0, x0, #~a" char-mask)
+                (emit-is-x0-equal-to char-tag)]
+       [(string?) (emit "and x0, x0, #~a" ptr-mask)
+                  (emit-is-x0-equal-to str-tag)]
+       [(vector?) (emit "and x0, x0, #~a" ptr-mask)
+                  (emit-is-x0-equal-to vec-tag)]
+       [(zero?) (emit-is-x0-equal-to 0)])]
     [(null? car cdr)
      (compile-expr (list-ref args 0) stack-index env)
      (case op
@@ -262,7 +261,9 @@
   ; string
   (check-equal? (compile-and-eval '(make-string 5 #\c)) "ccccc")
   (check-equal? (compile-and-eval '(string-ref (make-string 2 #\q) 1)) #\q)
+  (check-equal? (compile-and-eval '(string? (make-string 2 #\a))) #t)
   ; vector
   (check-equal? (compile-and-eval '(make-vector 2 #\c)) #(#\c #\c))
   (check-equal? (compile-and-eval '(vector-ref (make-vector 2 2) 0)) 2)
+  (check-equal? (compile-and-eval '(vector? (make-vector 2 2))) #t)
   )
