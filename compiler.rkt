@@ -153,7 +153,7 @@
   (with-output-to-file "/tmp/scheme.s"
     #:exists 'replace
     (lambda () (compile-program program)))
-  (system "gcc /tmp/scheme.s rts.c"))
+  (system "gcc /tmp/scheme.s c/runtime.c c/representation.c"))
 
 (define (compile-and-run program)
   (compile-to-binary program)
