@@ -11,19 +11,18 @@
         (system "./a.out"))
     (void))
 
-  (define (run args)
-    (match args
-      [(list file)
-       (define p (open-input-file file))
-       (let loop ([s (read file p)])
-         (when (not (eof-object? s))
-           (displayln s)
-           (loop (read file p))))]
-      [_ (printf "please provide a file~n")]))
-
   (define expression (make-parameter #f))
   (define show-asm (make-parameter #f))
   (define debug (make-parameter #f))
+
+  (define/match (run args)
+    [((list file))
+     (define p (open-input-file file))
+     (let loop ([s (read p)])
+       (when (not (eof-object? s))
+         (displayln s)
+         (loop (read file p))))]
+    [(_) (printf "please provide a file~n")])
 
   (command-line
    #:program "scheme"
