@@ -45,5 +45,7 @@ void show(int x) {
       show(cdr);
     }
     putchar(')');
+  } else {
+    printf("bad:%d", x);
   }
 }
