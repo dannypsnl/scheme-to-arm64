@@ -10,5 +10,5 @@ int main(int argc, const char **argv) {
   long val = scheme_entry((long) heap);
   show(val);
   free(heap);
-  puts("\n");
+  printf("\n");
 }
