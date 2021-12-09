@@ -15,7 +15,7 @@ void show(long x) {
       printf("#f");
     }
   } else if ((x & PTR_MASK) == PAIR_TAG) {
-    int *ptr = (int *)(long)(x - PAIR_TAG);
+    long *ptr = (long *)(x - PAIR_TAG);
     if (ptr == NULL) {
       printf("()");
       return;
@@ -29,7 +29,7 @@ void show(long x) {
 
     // show additional space-separated elems
     while ((cdr & PTR_MASK) == PAIR_TAG) {
-      ptr = (int *)(long)(cdr - PAIR_TAG);
+      ptr = (long *)(cdr - PAIR_TAG);
       if (ptr == NULL)
         break;
 

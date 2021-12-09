@@ -8,7 +8,7 @@
          "representation.rkt"
          "primitive.rkt")
 
-(define wordsize 4)
+(define wordsize 8)
 (define (immediate? x) (or (integer? x) (char? x) (boolean? x) (null? x)))
 
 (define (emit-is-x0-equal-to val)
