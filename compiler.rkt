@@ -1,8 +1,7 @@
 #lang racket
 
 (provide compile-program
-         compile-to-binary
-         compile-and-run)
+         compile-to-binary)
 
 (require "emit.rkt"
          "representation.rkt"
@@ -216,10 +215,6 @@
     (process "./a.out"))
   (do 'wait)
   (read stdout))
-
-(define (compile-and-run program)
-  (compile-to-binary program)
-  (system "./a.out"))
 
 (module+ test
   (require rackunit)

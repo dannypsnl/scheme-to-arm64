@@ -4,6 +4,10 @@
   (require racket/cmdline
            "compiler.rkt")
 
+  (define (compile-and-run program)
+    (compile-to-binary program)
+    (system "./a.out"))
+
   (define (run args)
     (match args
       [(list file)
