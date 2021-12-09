@@ -7,13 +7,14 @@
     -
     *
     /
+    add1 sub1
+    zero?
     ; list and pair
-    cons
+    car cdr cons
+    null?
     ; comparison operators
     = < > <= >= char=?
-    add1
-    sub1
+    ; type check
     integer?
     boolean?
-    char?
-    zero?))
+    char?))
