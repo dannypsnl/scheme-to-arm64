@@ -33,6 +33,12 @@
      (emit "orr x0, x0, #~a" pair-tag)
      ; we used two wordsize from heap
      (emit "add x28, x28, #~a" (* 2 wordsize))]
+    [(null? car cdr)
+     (compile-expr (list-ref args 0) stack-index env)
+     (case op
+       [(car) (emit "ldr x0, [x0, #~a]" (- pair-tag))]
+       [(cdr) (emit "ldr x0, [x0, #~a]" (- wordsize pair-tag))]
+       [(null?) (emit-is-x0-equal-to pair-tag)])]
     [(+ - * /)
      (compile-expr (list-ref args 0) stack-index env)
      (emit "str x0, [x29, #~a]" stack-index)
@@ -220,5 +226,9 @@
   (check-equal? (compile-and-eval '(zero? #\c)) #f)
   ; list and pair
   (check-equal? (compile-and-eval 'null) '())
+  (check-equal? (compile-and-eval '(null? null)) #t)
+  (check-equal? (compile-and-eval '(null? ())) #t)
   (check-equal? (compile-and-eval '(cons #\c 1)) (cons #\c 1))
+  (check-equal? (compile-and-eval '(car (cons 1 2))) 1)
+  (check-equal? (compile-and-eval '(cdr (cons 1 2))) 2)
   )
