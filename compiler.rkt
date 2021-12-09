@@ -25,10 +25,10 @@
     [(cons)
      ; store car/cdr to heap
      (compile-expr (list-ref args 0) stack-index env)
-     (emit "mov x1, x0")
-     (compile-expr (list-ref args 1) stack-index env)
-     (emit "mov x2, x0")
-     (emit "stp x1, x2, [x28]")
+     (emit "str x0, [x29, #~a]" stack-index)
+     (compile-expr (list-ref args 1) (- stack-index wordsize) env)
+     (emit "ldr x1, [x29, #~a]" stack-index)
+     (emit "stp x1, x0, [x28]")
      ; save pointer and tag it
      (emit "orr x0, x28, #~a" pair-tag)
      ; we used two wordsize from heap
