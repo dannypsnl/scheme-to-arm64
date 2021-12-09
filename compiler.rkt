@@ -182,15 +182,20 @@
 (module+ test
   (require rackunit)
 
+  ; arithmetic
   (check-equal? (compile-and-eval '1) 1)
   (check-equal? (compile-and-eval '(add1 1)) 2)
+  (check-equal? (compile-and-eval '(+ 1 1)) 2)
+  ; conditional
   (check-equal? (compile-and-eval '(if #f 1)) #f)
   (check-equal? (compile-and-eval '(if #t 1)) 1)
   (check-equal? (compile-and-eval '(if #t 1 2)) 1)
   (check-equal? (compile-and-eval '(if #f 1 2)) 2)
-  (check-equal? (compile-and-eval '(let ([x 1]) x)) 1)
-  (check-equal? (compile-and-eval '(= 1 1)) #t)
-  (check-equal? (compile-and-eval '(+ 1 1)) 2)
+  (check-equal? (compile-and-eval '(cond
+                                     [(= (- 2 1) 1) 1]
+                                     [#t 2]))
+                1)
+  ; type check
   (check-equal? (compile-and-eval '(char=? #\c #\a)) #f)
   (check-equal? (compile-and-eval '(char=? #\b #\b)) #t)
   (check-equal? (compile-and-eval '(char? #\c)) #t)
@@ -199,10 +204,10 @@
   (check-equal? (compile-and-eval '(boolean? 1)) #f)
   (check-equal? (compile-and-eval '(integer? 1)) #t)
   (check-equal? (compile-and-eval '(integer? #f)) #f)
-  (check-equal? (compile-and-eval '(cond
-                                     [(= (- 2 1) 1) 1]
-                                     [#t 2]))
-                1)
+  ; let
+  (check-equal? (compile-and-eval '(let ([x 1]) x)) 1)
+  ; comparsion
+  (check-equal? (compile-and-eval '(= 1 1)) #t)
   (check-equal? (compile-and-eval '(<= (sub1 10) (* 9 (/ 4 2)))) #t)
   (check-equal? (compile-and-eval '(> 2 1)) #t)
   (check-equal? (compile-and-eval '(>= 2 2)) #t)
@@ -213,4 +218,7 @@
   (check-equal? (compile-and-eval '(<= 2 2)) #t)
   (check-equal? (compile-and-eval '(zero? 0)) #t)
   (check-equal? (compile-and-eval '(zero? #\c)) #f)
+  ; list and pair
+  (check-equal? (compile-and-eval 'null) '())
+  (check-equal? (compile-and-eval '(cons #\c 1)) (cons #\c 1))
   )
