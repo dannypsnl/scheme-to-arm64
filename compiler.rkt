@@ -65,12 +65,11 @@
      (emit "sub x0, x0, #~a" (case op [(string-length) str-tag] [(vector-length) vec-tag]))
      (emit "ldr x0, [x0]")
      (emit "lsl x0, x0, #~a" fixnum-shift)]
-    [(add1)
+    [(add1 sub1)
      (compile-expr (list-ref args 0) stack-index env)
-     (emit "add x0, x0, #~a" (immediate-rep 1))]
-    [(sub1)
-     (compile-expr (list-ref args 0) stack-index env)
-     (emit "sub x0, x0, #~a" (immediate-rep 1))]
+     (case op
+       [(add1) (emit "add x0, x0, #~a" (immediate-rep 1))]
+       [(sub1) (emit "sub x0, x0, #~a" (immediate-rep 1))])]
     [(+ - * /)
      (compile-expr (list-ref args 0) stack-index env)
      (emit "str x0, [x29, #~a]" stack-index)
