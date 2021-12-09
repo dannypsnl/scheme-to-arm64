@@ -51,8 +51,7 @@
      (emit "mov x0, x1")]
     [(string-ref vector-ref)
      (compile-expr (list-ref args 0) stack-index env)
-     (emit "sub x0, x0, #~a" (case op [(string-ref) str-tag] [(vector-ref) vec-tag]))
-     (emit "add x1, x0, #~a" wordsize)
+     (emit "add x1, x0, #~a" (- wordsize (case op [(string-ref) str-tag] [(vector-ref) vec-tag])))
      (compile-expr (list-ref args 1) (- stack-index wordsize) env)
      ; get index, so now index is in x0
      ; x1 is current pointer, x1 <- x1 + x0>>shift is offset of value
