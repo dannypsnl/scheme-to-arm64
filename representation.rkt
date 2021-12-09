@@ -9,7 +9,8 @@
     [(boolean? x)
      (if x
          (bitwise-ior (arithmetic-shift 1 bool-shift) bool-tag)
-         bool-tag)]))
+         bool-tag)]
+    [(null? x) pair-tag]))
 
 (define fixnum-shift 2)
 (define fixnum-mask 3)

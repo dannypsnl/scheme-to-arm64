@@ -127,6 +127,7 @@
 
 (define (compile-expr e stack-index env)
   (match e
+    [(or 'null '()) (emit "mov x0, #~a" (immediate-rep null))]
     [(? immediate? e) (emit "mov x0, #~a" (immediate-rep e))]
     [(? variable? e) (compile-var-load e stack-index env)]
     [`(if ,test ,t-body) (compile-if test t-body #f stack-index env)]
@@ -146,6 +147,7 @@
   (emit ".globl _scheme_entry")
   (emit "_scheme_entry:")
 
+  (emit "add x28, sp, #8")
   (compile-expr program (- wordsize) '())
   (emit "ret"))
 

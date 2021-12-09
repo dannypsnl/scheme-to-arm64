@@ -7,6 +7,8 @@
     -
     *
     /
+    ; list and pair
+    cons
     ; comparison operators
     = < > <= >= char=?
     add1
