@@ -17,4 +17,8 @@
     ; type check
     integer?
     boolean?
-    char?))
+    char?
+    ; string
+    make-string
+    ; vector
+    make-vector))
