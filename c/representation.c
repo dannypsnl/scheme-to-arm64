@@ -22,8 +22,8 @@ void show(long x) {
     }
 
     // either a list or a dotted pair
-    int car = ptr[0];
-    int cdr = ptr[1];
+    long car = ptr[0];
+    long cdr = ptr[1];
     putchar('(');
     show(car);
 
