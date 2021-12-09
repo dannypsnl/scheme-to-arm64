@@ -17,7 +17,7 @@ You're assume to familiar with arm64's assembly to contribute. A good start is:
 If you have [`direnv`](https://direnv.net/), you will get git hooks directly. Or you can use:
 
 ```shell
-source .envrc
+racket .hooks/link.rkt
 ```
 
 to get git hooks. In this repository, git hooks is installed for run tests before push since arm64 is unsupported on GitHub Action yet.
