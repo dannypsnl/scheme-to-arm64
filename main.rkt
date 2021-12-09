@@ -30,5 +30,5 @@
        (begin
          (when (show-asm)
            (compile-program program))
-         (displayln (compile-and-run program)))
+         (void (compile-and-run program)))
        (run args))))

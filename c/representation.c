@@ -21,8 +21,10 @@ void show(int x) {
       return;
     }
 
+    printf("   r: %p\n", ptr);
     // either a list or a dotted pair
     int car = ptr[0];
+    printf("   r: %p\n", ptr);
     int cdr = ptr[1];
     putchar('(');
     show(car);
@@ -46,6 +48,6 @@ void show(int x) {
     }
     putchar(')');
   } else {
-    printf("bad:%d", x);
+    printf("bad: %d", x);
   }
 }
