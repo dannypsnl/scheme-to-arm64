@@ -38,13 +38,8 @@
      (emit "lsr x0, x0, #~a" fixnum-shift)
      ; store length into new structure
      (emit "str x0, [x28]")
-     ; save actual length while we tag the pointer
-     (emit "mov x1, x0")
      ; save pointer and tag it
-     (emit "mov x0, x28")
-     (case op
-       [(make-string) (emit "orr x1, x0, #~a" str-tag)]
-       [(make-vector) (emit "orr x1, x0, #~a" vec-tag)])
+     (emit "orr x1, x28, #~a" (case op [(make-string) str-tag] [(make-vector) vec-tag]))
      (emit "add x28, x28, #8")
      (when (> (length args) 1)
        (compile-expr (list-ref args 1) (- stack-index wordsize) env)
