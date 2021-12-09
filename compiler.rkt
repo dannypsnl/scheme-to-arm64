@@ -11,40 +11,40 @@
 (define wordsize 4)
 (define (immediate? x) (or (integer? x) (char? x) (boolean? x) (null? x)))
 
-(define (emit-is-w0-equal-to val)
+(define (emit-is-x0-equal-to val)
   (define-label if-true end)
-  (emit "cmp w0, #~a" val)
+  (emit "cmp x0, #~a" val)
   (b.eq if-true)
-  (emit "mov w0, #~a" (immediate-rep #f))
+  (emit "mov x0, #~a" (immediate-rep #f))
   (b end)
   (label if-true)
-  (emit "mov w0, #~a" (immediate-rep #t))
+  (emit "mov x0, #~a" (immediate-rep #t))
   (label end))
 (define (compile-primitive-call op args stack-index env)
   (case op
     [(+ - * /)
      (compile-expr (list-ref args 0) stack-index env)
-     (emit "str w0, [x29, #~a]" stack-index)
+     (emit "str x0, [x29, #~a]" stack-index)
      (compile-expr (list-ref args 1) (- stack-index wordsize) env)
      (emit "ldr w8, [x29, #~a]" stack-index)
      (case op
-       [(+) (emit "add w0, w8, w0")]
-       [(-) (emit "sub w0, w8, w0")]
-       [(*) (emit "lsr w0, w0, #~a" fixnum-shift)
-            (emit "mul w0, w8, w0")]
-       [(/) (emit "lsr w0, w0, #~a" fixnum-shift)
-            (emit "sdiv w0, w8, w0")])]
+       [(+) (emit "add x0, w8, x0")]
+       [(-) (emit "sub x0, w8, x0")]
+       [(*) (emit "lsr x0, x0, #~a" fixnum-shift)
+            (emit "mul x0, w8, x0")]
+       [(/) (emit "lsr x0, x0, #~a" fixnum-shift)
+            (emit "sdiv x0, w8, x0")])]
     [(= < > <= >= char=?)
      (define-label if-true end)
      (compile-expr (list-ref args 0) stack-index env)
      (when (eq? op 'char=?)
-       (emit "lsr w0, w0, #~a" char-shift))
-     (emit "str w0, [x29, #~a]" stack-index)
+       (emit "lsr x0, x0, #~a" char-shift))
+     (emit "str x0, [x29, #~a]" stack-index)
      (compile-expr (list-ref args 1) (- stack-index wordsize) env)
      (emit "ldr w8, [x29, #~a]" stack-index)
      (when (eq? op 'char=?)
-       (emit "lsr w0, w0, #~a" char-shift))
-     (emit "cmp w8, w0")
+       (emit "lsr x0, x0, #~a" char-shift))
+     (emit "cmp w8, x0")
      (case op
        [(=) (b.eq if-true)]
        [(<) (b.lt if-true)]
@@ -52,32 +52,32 @@
        [(<=) (b.le if-true)]
        [(>=) (b.ge if-true)]
        [(char=?) (b.eq if-true)])
-     (emit "mov w0, #~a" (immediate-rep #f))
+     (emit "mov x0, #~a" (immediate-rep #f))
      (b end)
      (label if-true)
-     (emit "mov w0, #~a" (immediate-rep #t))
+     (emit "mov x0, #~a" (immediate-rep #t))
      (label end)]
     [(add1)
      (compile-expr (list-ref args 0) stack-index env)
-     (emit "add w0, w0, #~a" (immediate-rep 1))]
+     (emit "add x0, x0, #~a" (immediate-rep 1))]
     [(sub1)
      (compile-expr (list-ref args 0) stack-index env)
-     (emit "sub w0, w0, #~a" (immediate-rep 1))]
+     (emit "sub x0, x0, #~a" (immediate-rep 1))]
     [(integer?)
      (compile-expr (list-ref args 0) stack-index env)
-     (emit "and w0, w0, #~a" fixnum-mask)
-     (emit-is-w0-equal-to 0)]
+     (emit "and x0, x0, #~a" fixnum-mask)
+     (emit-is-x0-equal-to 0)]
     [(boolean?)
      (compile-expr (list-ref args 0) stack-index env)
-     (emit "and w0, w0, #~a" bool-mask)
-     (emit-is-w0-equal-to bool-tag)]
+     (emit "and x0, x0, #~a" bool-mask)
+     (emit-is-x0-equal-to bool-tag)]
     [(char?)
      (compile-expr (list-ref args 0) stack-index env)
-     (emit "and w0, w0, #~a" char-mask)
-     (emit-is-w0-equal-to char-tag)]
+     (emit "and x0, x0, #~a" char-mask)
+     (emit-is-x0-equal-to char-tag)]
     [(zero?)
      (compile-expr (list-ref args 0) stack-index env)
-     (emit-is-w0-equal-to 0)]))
+     (emit-is-x0-equal-to 0)]))
 
 (define (compile-let names exprs body stack-index env)
   (let* ([stack-offsets
@@ -89,7 +89,7 @@
     (for ([expr exprs]
           [offset stack-offsets])
       (compile-expr expr inner-si env)
-      (emit "str w0, [x29, #~a]" offset))
+      (emit "str x0, [x29, #~a]" offset))
 
     ; evaluate all body forms - this will leave the last one's output in %eax
     (for ([form body])
@@ -97,12 +97,12 @@
 
 (define (variable? x) (symbol? x))
 (define (compile-var-load v stack-index env)
-  (emit "ldr w0, [x29, #~a]" (cdr (assoc v env))))
+  (emit "ldr x0, [x29, #~a]" (cdr (assoc v env))))
 
 (define (compile-if test t-body f-body stack-index env)
   (define-label if-true end)
   (compile-expr test stack-index env)
-  (emit-is-w0-equal-to (immediate-rep #t))
+  (emit-is-x0-equal-to (immediate-rep #t))
   (b.eq if-true)
   (compile-expr f-body stack-index env)
   (b end)
@@ -116,7 +116,7 @@
         [exprs bodys])
     (define-label body-tag next)
     (compile-expr test stack-index env)
-    (emit-is-w0-equal-to (immediate-rep #t))
+    (emit-is-x0-equal-to (immediate-rep #t))
     (b.ne next)
     (label body-tag
            (for ([expr exprs])
@@ -127,7 +127,7 @@
 
 (define (compile-expr e stack-index env)
   (match e
-    [(? immediate? e) (emit "mov w0, #~a" (immediate-rep e))]
+    [(? immediate? e) (emit "mov x0, #~a" (immediate-rep e))]
     [(? variable? e) (compile-var-load e stack-index env)]
     [`(if ,test ,t-body) (compile-if test t-body #f stack-index env)]
     [`(if ,test ,t-body ,f-body) (compile-if test t-body f-body stack-index env)]
