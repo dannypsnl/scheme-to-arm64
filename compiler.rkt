@@ -143,10 +143,6 @@
     (for ([form body])
       (compile-expr form inner-si inner-env))))
 
-(define (variable? x) (symbol? x))
-(define (compile-var-load v stack-index env)
-  (emit "ldr x0, [x29, #~a]" (cdr (assoc v env))))
-
 (define (compile-if test t-body f-body stack-index env)
   (define-label if-true end)
   (compile-expr test stack-index env)
@@ -177,7 +173,7 @@
   (match e
     [(or 'null '()) (emit "mov x0, #~a" (immediate-rep null))]
     [(? immediate? e) (emit "mov x0, #~a" (immediate-rep e))]
-    [(? variable? e) (compile-var-load e stack-index env)]
+    [(? symbol? e) (emit "ldr x0, [x29, #~a]" (cdr (assoc e env)))]
     [(or (vector vs ...) `(vector ,vs ...))
      (emit "mov x0, #~a" (length vs))
      (emit "str x0, [x28]")
