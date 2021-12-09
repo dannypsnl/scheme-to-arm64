@@ -54,6 +54,26 @@
          (emit "str w0, [x28, #~a]" i))
        (emit "add x28, x28, #~a" (list-ref args 0)))
      (emit "mov x0, x1")]
+    ;;; (make-vector k)   - construct a vector of length k
+    [(make-vector)
+     (compile-expr (list-ref args 0) stack-index env)
+     (emit "lsr x0, x0, #~a" fixnum-shift)
+     ; store length into new structure
+     (emit "str x0, [x28]")
+     ; save actual length while we tag the pointer
+     (emit "mov x1, x0")
+     ; save pointer and tag it
+     (emit "mov x0, x28")
+     (emit "orr x1, x0, #~a" vec-tag)
+     ; advance allocation pointer
+     (emit "add x28, x28, #8")
+     ;;; (make-vector k v)   - construct a vector of length k with cells set to v
+     (when (> (length args) 1)
+       (compile-expr (list-ref args 1) (- stack-index wordsize) env)
+       (for ([i (range (list-ref args 0))])
+         (emit "str x0, [x28, #~a]" (* wordsize i)))
+       (emit "add x28, x28, #~a" (* wordsize (list-ref args 0))))
+     (emit "mov x0, x1")]
     [(add1)
      (compile-expr (list-ref args 0) stack-index env)
      (emit "add x0, x0, #~a" (immediate-rep 1))]
@@ -254,4 +274,6 @@
   (check-equal? (compile-and-eval '(cdr (cons 1 2))) 2)
   ; string
   (check-equal? (compile-and-eval '(make-string 5 #\c)) "ccccc")
+  ; vector
+  (check-equal? (compile-and-eval '(make-vector 2 #\c)) #(#\c #\c))
   )
