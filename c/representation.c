@@ -20,13 +20,11 @@ void show(long x) {
       printf("()");
       return;
     }
-
     // either a list or a dotted pair
     long car = ptr[0];
     long cdr = ptr[1];
     putchar('(');
     show(car);
-
     // show additional space-separated elems
     while ((cdr & PTR_MASK) == PAIR_TAG) {
       ptr = (long *)(cdr - PAIR_TAG);
@@ -38,7 +36,6 @@ void show(long x) {
       putchar(' ');
       show(car);
     }
-
     // show dotted pair notation if relevant
     if ((cdr & PTR_MASK) != PAIR_TAG) {
       printf(" . ");
@@ -56,7 +53,6 @@ void show(long x) {
   } else if ((x & PTR_MASK) == VEC_TAG) {
     long *ptr = (long *)(x - VEC_TAG);
     long len = *ptr++;
-
     printf("#(");
     for (; len > 0; len--) {
       show(*ptr++);
