@@ -178,7 +178,7 @@
     [(or 'null '()) (emit "mov x0, #~a" (immediate-rep null))]
     [(? immediate? e) (emit "mov x0, #~a" (immediate-rep e))]
     [(? variable? e) (compile-var-load e stack-index env)]
-    [`(vector ,vs ...)
+    [(or (vector vs ...) `(vector ,vs ...))
      (emit "mov x0, #~a" (length vs))
      (emit "str x0, [x28]")
      (emit "orr x1, x28, #~a" vec-tag)
@@ -279,6 +279,7 @@
   (check-equal? (compile-and-eval '(string? (make-string 2 #\a))) #t)
   (check-equal? (compile-and-eval '(string-length (make-string 2 #\b))) 2)
   ; vector
+  (check-equal? (compile-and-eval '#(1 2 3)) #(1 2 3))
   (check-equal? (compile-and-eval '(vector 1 2 3)) #(1 2 3))
   (check-equal? (compile-and-eval '(make-vector 2 #\c)) #(#\c #\c))
   (check-equal? (compile-and-eval '(vector-ref (make-vector 2 2) 0)) 2)
