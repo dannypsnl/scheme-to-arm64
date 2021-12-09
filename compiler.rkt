@@ -203,11 +203,13 @@
   (compile-expr program (- wordsize) '())
   (emit "ret"))
 
-(define (compile-to-binary program)
+(define (compile-to-binary program [debug? #f])
   (with-output-to-file "/tmp/scheme.s"
     #:exists 'replace
     (lambda () (compile-program program)))
-  (system "clang -target arm64-apple-darwin-macho /tmp/scheme.s c/runtime.c c/representation.c"))
+  (if debug?
+      (system "clang -g -target arm64-apple-darwin-macho /tmp/scheme.s c/runtime.c c/representation.c")
+      (system "clang -target arm64-apple-darwin-macho /tmp/scheme.s c/runtime.c c/representation.c")))
 
 (define (compile-and-eval program)
   (compile-to-binary program)

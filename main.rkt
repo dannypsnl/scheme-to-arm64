@@ -4,9 +4,12 @@
   (require racket/cmdline
            "compiler.rkt")
 
-  (define (compile-and-run program)
-    (compile-to-binary program)
-    (system "./a.out"))
+  (define (compile-and-run program debug?)
+    (compile-to-binary program debug?)
+    (if debug?
+        (system "lldb ./a.out")
+        (system "./a.out"))
+    (void))
 
   (define (run args)
     (match args
@@ -20,6 +23,7 @@
 
   (define expression (make-parameter #f))
   (define show-asm (make-parameter #f))
+  (define debug (make-parameter #f))
 
   (command-line
    #:program "scheme"
@@ -28,11 +32,12 @@
    #:once-each
    [("-e" "--expr") e "run single scheme expression" (expression (read (open-input-string e)))]
    [("-s") "show asm" (show-asm #t)]
+   [("-d" "--debug") "generate debug information" (debug #t)]
    #:args args
    (define program (expression))
    (if program
        (begin
          (when (show-asm)
            (compile-program program))
-         (void (compile-and-run program)))
+         (compile-and-run program (debug)))
        (run args))))
