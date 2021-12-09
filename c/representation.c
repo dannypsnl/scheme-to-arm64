@@ -45,6 +45,25 @@ void show(long x) {
       show(cdr);
     }
     putchar(')');
+  } else if ((x & PTR_MASK) == STR_TAG) {
+    long *ptr = (long *)(x - STR_TAG);
+    long len = *ptr;
+    char *body = (char *)(ptr + 1);
+    putchar('"');
+    for (; len > 0; len--)
+      putchar(*body++);
+    putchar('"');
+  } else if ((x & PTR_MASK) == VEC_TAG) {
+    long *ptr = (long *)(x - VEC_TAG);
+    long len = *ptr++;
+
+    printf("#(");
+    for (; len > 0; len--) {
+      show(*ptr++);
+      if (len != 1)
+        putchar(' ');
+    }
+    printf(")");
   } else {
     printf("bad: %ld", x);
   }
