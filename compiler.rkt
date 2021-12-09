@@ -25,9 +25,9 @@
     [(cons)
      ; store car/cdr to heap
      (compile-expr (list-ref args 0) stack-index env)
-     (emit "str x0, [x29, #~a]" stack-index)
+     (emit "str x0, [sp, #~a]" stack-index)
      (compile-expr (list-ref args 1) (- stack-index wordsize) env)
-     (emit "ldr x1, [x29, #~a]" stack-index)
+     (emit "ldr x1, [sp, #~a]" stack-index)
      (emit "stp x1, x0, [x28]")
      ; save pointer and tag it
      (emit "orr x0, x28, #~a" pair-tag)
@@ -72,9 +72,9 @@
        [(sub1) (emit "sub x0, x0, #~a" (immediate-rep 1))])]
     [(+ - * /)
      (compile-expr (list-ref args 0) stack-index env)
-     (emit "str x0, [x29, #~a]" stack-index)
+     (emit "str x0, [sp, #~a]" stack-index)
      (compile-expr (list-ref args 1) (- stack-index wordsize) env)
-     (emit "ldr x8, [x29, #~a]" stack-index)
+     (emit "ldr x8, [sp, #~a]" stack-index)
      (case op
        [(+) (emit "add x0, x8, x0")]
        [(-) (emit "sub x0, x8, x0")]
@@ -87,9 +87,9 @@
      (compile-expr (list-ref args 0) stack-index env)
      (when (eq? op 'char=?)
        (emit "lsr x0, x0, #~a" char-shift))
-     (emit "str x0, [x29, #~a]" stack-index)
+     (emit "str x0, [sp, #~a]" stack-index)
      (compile-expr (list-ref args 1) (- stack-index wordsize) env)
-     (emit "ldr x8, [x29, #~a]" stack-index)
+     (emit "ldr x8, [sp, #~a]" stack-index)
      (when (eq? op 'char=?)
        (emit "lsr x0, x0, #~a" char-shift))
      (emit "cmp x8, x0")
@@ -136,7 +136,7 @@
     (for ([expr exprs]
           [offset stack-offsets])
       (compile-expr expr inner-si env)
-      (emit "str x0, [x29, #~a]" offset))
+      (emit "str x0, [sp, #~a]" offset))
 
     ; evaluate all body forms - this will leave the last one's output in x0
     (for ([form body])
@@ -172,7 +172,7 @@
   (match e
     [(or 'null '()) (emit "mov x0, #~a" (immediate-rep null))]
     [(? immediate? e) (emit "mov x0, #~a" (immediate-rep e))]
-    [(? symbol? e) (emit "ldr x0, [x29, #~a]" (cdr (assoc e env)))]
+    [(? symbol? e) (emit "ldr x0, [sp, #~a]" (cdr (assoc e env)))]
     [(or (vector vs ...) `(vector ,vs ...))
      (emit "mov x0, #~a" (length vs))
      (emit "str x0, [x28]")
