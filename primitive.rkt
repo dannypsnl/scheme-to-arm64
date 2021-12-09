@@ -19,6 +19,6 @@
     boolean?
     char?
     ; string
-    make-string string-ref string?
+    make-string string-ref string? string-length
     ; vector
-    make-vector vector-ref vector?))
+    make-vector vector-ref vector? vector-length))

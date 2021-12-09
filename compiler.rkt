@@ -61,6 +61,11 @@
      (case op ; now we convert loaded char back to encoded char
        [(string-ref) (emit "lsl x0, x0, #~a" char-shift)
                      (emit "orr x0, x0, #~a" char-tag)])]
+    [(string-length vector-length)
+     (compile-expr (list-ref args 0) stack-index env)
+     (emit "sub x0, x0, #~a" (case op [(string-length) str-tag] [(vector-length) vec-tag]))
+     (emit "ldr x0, [x0]")
+     (emit "lsl x0, x0, #~a" fixnum-shift)]
     [(add1)
      (compile-expr (list-ref args 0) stack-index env)
      (emit "add x0, x0, #~a" (immediate-rep 1))]
@@ -262,8 +267,10 @@
   (check-equal? (compile-and-eval '(make-string 5 #\c)) "ccccc")
   (check-equal? (compile-and-eval '(string-ref (make-string 2 #\q) 1)) #\q)
   (check-equal? (compile-and-eval '(string? (make-string 2 #\a))) #t)
+  (check-equal? (compile-and-eval '(string-length (make-string 2 #\b))) 2)
   ; vector
   (check-equal? (compile-and-eval '(make-vector 2 #\c)) #(#\c #\c))
   (check-equal? (compile-and-eval '(vector-ref (make-vector 2 2) 0)) 2)
   (check-equal? (compile-and-eval '(vector? (make-vector 2 2))) #t)
+  (check-equal? (compile-and-eval '(vector-length (make-vector 3 #\b))) 3)
   )
