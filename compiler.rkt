@@ -28,11 +28,32 @@
      (emit "str x0, [x28]")
      (compile-expr (list-ref args 1) stack-index env)
      (emit "str x0, [x28, #~a]" wordsize)
-     ; save pointer and tag it, then increment heap ptr
+     ; save pointer and tag it
      (emit "mov x0, x28")
      (emit "orr x0, x0, #~a" pair-tag)
      ; we used two wordsize from heap
      (emit "add x28, x28, #~a" (* 2 wordsize))]
+    ;;; (make-string k)   - construct a string of length k
+    [(make-string)
+     (compile-expr (list-ref args 0) stack-index env)
+     (emit "lsr x0, x0, #~a" fixnum-shift)
+     ; store length into new structure
+     (emit "str x0, [x28]")
+     ; save actual length while we tag the pointer
+     (emit "mov x1, x0")
+     ; save pointer and tag it
+     (emit "mov x0, x28")
+     (emit "orr x1, x0, #~a" str-tag)
+     ; advance allocation pointer
+     (emit "add x28, x28, #8")
+     ;;; (make-string k c) - construct a string of length k filled with c
+     (when (> (length args) 1)
+       (compile-expr (list-ref args 1) (- stack-index wordsize) env)
+       (emit "lsr w0, w0, #~a" char-shift)
+       (for ([i (range (list-ref args 0))])
+         (emit "str w0, [x28, #~a]" i))
+       (emit "add x28, x28, #~a" (list-ref args 0)))
+     (emit "mov x0, x1")]
     [(add1)
      (compile-expr (list-ref args 0) stack-index env)
      (emit "add x0, x0, #~a" (immediate-rep 1))]
@@ -108,7 +129,7 @@
       (compile-expr expr inner-si env)
       (emit "str x0, [x29, #~a]" offset))
 
-    ; evaluate all body forms - this will leave the last one's output in %eax
+    ; evaluate all body forms - this will leave the last one's output in x0
     (for ([form body])
       (compile-expr form inner-si inner-env))))
 
@@ -231,4 +252,6 @@
   (check-equal? (compile-and-eval '(cons #\c 1)) (cons #\c 1))
   (check-equal? (compile-and-eval '(car (cons 1 2))) 1)
   (check-equal? (compile-and-eval '(cdr (cons 1 2))) 2)
+  ; string
+  (check-equal? (compile-and-eval '(make-string 5 #\c)) "ccccc")
   )
