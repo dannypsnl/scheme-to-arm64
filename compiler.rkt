@@ -178,12 +178,11 @@
      (emit "mov x0, #~a" (length vs))
      (emit "str x0, [x28]")
      (emit "orr x1, x28, #~a" vec-tag)
-     (emit "add x28, x28, #8")
-     (when (> (length vs) 1)
-       (for ([i (range (length vs))])
-         (compile-expr (list-ref vs i) stack-index env)
-         (emit "str x0, [x28, #~a]" (* wordsize i)))
-       (emit "add x28, x28, #~a" (* wordsize (length vs))))
+     (emit "add x28, x28, #~a" wordsize)
+     (for ([v vs] [i (range (length vs))])
+       (compile-expr v stack-index env)
+       (emit "str x0, [x28, #~a]" (* wordsize i)))
+     (emit "add x28, x28, #~a" (* wordsize (length vs)))
      (emit "mov x0, x1")]
     [`(if ,test ,t-body) (compile-if test t-body #f stack-index env)]
     [`(if ,test ,t-body ,f-body) (compile-if test t-body f-body stack-index env)]
@@ -277,6 +276,7 @@
   ; vector
   (check-equal? (compile-and-eval '#(1 2 3)) #(1 2 3))
   (check-equal? (compile-and-eval '(vector 1 2 3)) #(1 2 3))
+  (check-equal? (compile-and-eval '(vector)) #())
   (check-equal? (compile-and-eval '(make-vector 2 #\c)) #(#\c #\c))
   (check-equal? (compile-and-eval '(vector-ref (make-vector 2 2) 0)) 2)
   (check-equal? (compile-and-eval '(vector? (make-vector 2 2))) #t)
