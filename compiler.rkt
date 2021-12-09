@@ -26,14 +26,14 @@
      (compile-expr (list-ref args 0) stack-index env)
      (emit "str x0, [x29, #~a]" stack-index)
      (compile-expr (list-ref args 1) (- stack-index wordsize) env)
-     (emit "ldr w8, [x29, #~a]" stack-index)
+     (emit "ldr x8, [x29, #~a]" stack-index)
      (case op
-       [(+) (emit "add x0, w8, x0")]
-       [(-) (emit "sub x0, w8, x0")]
+       [(+) (emit "add x0, x8, x0")]
+       [(-) (emit "sub x0, x8, x0")]
        [(*) (emit "lsr x0, x0, #~a" fixnum-shift)
-            (emit "mul x0, w8, x0")]
+            (emit "mul x0, x8, x0")]
        [(/) (emit "lsr x0, x0, #~a" fixnum-shift)
-            (emit "sdiv x0, w8, x0")])]
+            (emit "sdiv x0, x8, x0")])]
     [(= < > <= >= char=?)
      (define-label if-true end)
      (compile-expr (list-ref args 0) stack-index env)
@@ -41,10 +41,10 @@
        (emit "lsr x0, x0, #~a" char-shift))
      (emit "str x0, [x29, #~a]" stack-index)
      (compile-expr (list-ref args 1) (- stack-index wordsize) env)
-     (emit "ldr w8, [x29, #~a]" stack-index)
+     (emit "ldr x8, [x29, #~a]" stack-index)
      (when (eq? op 'char=?)
        (emit "lsr x0, x0, #~a" char-shift))
-     (emit "cmp w8, x0")
+     (emit "cmp x8, x0")
      (case op
        [(=) (b.eq if-true)]
        [(<) (b.lt if-true)]
