@@ -43,12 +43,24 @@
      (emit "add x28, x28, #8")
      (when (> (length args) 1)
        (compile-expr (list-ref args 1) (- stack-index wordsize) env)
-       (when (eq? op 'make-string) (emit "lsr w0, w0, #~a" char-shift))
-       (define k (if (eq? op 'make-string) 1 wordsize))
+       (case op [(make-string) (emit "lsr w0, w0, #~a" char-shift)])
+       (define k (case op [(make-string) 1] [(make-vector) wordsize]))
        (for ([i (range (list-ref args 0))])
          (emit "str x0, [x28, #~a]" (* k i)))
        (emit "add x28, x28, #~a" (* k (list-ref args 0))))
      (emit "mov x0, x1")]
+    [(string-ref vector-ref)
+     (compile-expr (list-ref args 0) stack-index env)
+     (emit "sub x0, x0, #~a" (case op [(string-ref) str-tag] [(vector-ref) vec-tag]))
+     (emit "add x1, x0, #~a" wordsize)
+     (compile-expr (list-ref args 1) (- stack-index wordsize) env)
+     ; get index, so now index is in x0
+     ; x1 is current pointer, x1 <- x1 + x0>>shift is offset of value
+     (emit "add x1, x1, x0, lsr #~a" (case op [(string-ref) fixnum-shift] [(vector-ref) (+ fixnum-shift 2)]))
+     (emit "ldr x0, [x1]")
+     (case op ; now we convert loaded char back to encoded char
+       [(string-ref) (emit "lsl x0, x0, #~a" char-shift)
+                     (emit "orr x0, x0, #~a" char-tag)])]
     [(add1)
      (compile-expr (list-ref args 0) stack-index env)
      (emit "add x0, x0, #~a" (immediate-rep 1))]
@@ -249,6 +261,8 @@
   (check-equal? (compile-and-eval '(cdr (cons 1 2))) 2)
   ; string
   (check-equal? (compile-and-eval '(make-string 5 #\c)) "ccccc")
+  (check-equal? (compile-and-eval '(string-ref (make-string 2 #\q) 1)) #\q)
   ; vector
   (check-equal? (compile-and-eval '(make-vector 2 #\c)) #(#\c #\c))
+  (check-equal? (compile-and-eval '(vector-ref (make-vector 2 2) 0)) 2)
   )

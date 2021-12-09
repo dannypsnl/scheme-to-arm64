@@ -19,6 +19,6 @@
     boolean?
     char?
     ; string
-    make-string
+    make-string string-ref
     ; vector
-    make-vector))
+    make-vector vector-ref))
