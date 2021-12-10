@@ -17,11 +17,8 @@
 
   (define/match (run args)
     [((list file))
-     (define p (open-input-file file))
-     (let loop ([s (read p)])
-       (when (not (eof-object? s))
-         (displayln s)
-         (loop (read file p))))]
+     (for ([s (sequence->list (in-port read (open-input-file file)))])
+       (displayln s))]
     [(_) (printf "please provide a file~n")])
 
   (command-line
