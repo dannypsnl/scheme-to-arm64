@@ -72,15 +72,18 @@
     [(+ - * /)
      (compile-expr (list-ref args 0) stack-index env)
      (emit "str x0, [sp, #~a]" stack-index)
-     (compile-expr (list-ref args 1) (- stack-index wordsize) env)
-     (emit "ldr x8, [sp, #~a]" stack-index)
-     (case op
-       [(+) (emit "add x0, x8, x0")]
-       [(-) (emit "sub x0, x8, x0")]
-       [(*) (emit "lsr x0, x0, #~a" fixnum-shift)
-            (emit "mul x0, x8, x0")]
-       [(/) (emit "lsr x0, x0, #~a" fixnum-shift)
-            (emit "sdiv x0, x8, x0")])]
+     (for ([v (cdr args)])
+       (compile-expr v (- stack-index wordsize) env)
+       (emit "ldr x1, [sp, #~a]" stack-index)
+       (case op
+         [(+) (emit "add x1, x1, x0")]
+         [(-) (emit "sub x1, x1, x0")]
+         [(*) (emit "lsr x0, x0, #~a" fixnum-shift)
+              (emit "mul x1, x1, x0")]
+         [(/) (emit "lsr x0, x0, #~a" fixnum-shift)
+              (emit "sdiv x1, x1, x0")])
+       (emit "str x1, [sp, #~a]" stack-index))
+     (emit "ldr x0, [sp, #~a]" stack-index)]
     [(= < > <= >= char=?)
      (define-label if-true end)
      (compile-expr (list-ref args 0) stack-index env)
@@ -225,6 +228,8 @@
   (check-equal? (compile-and-eval '1) 1)
   (check-equal? (compile-and-eval '(add1 1)) 2)
   (check-equal? (compile-and-eval '(+ 1 1)) 2)
+  (check-equal? (compile-and-eval '(+ 1 2 3)) 6)
+  (check-equal? (compile-and-eval '(- 1 2 3)) -4)
   ; conditional
   (check-equal? (compile-and-eval '(if #f 1)) #f)
   (check-equal? (compile-and-eval '(if #t 1)) 1)
