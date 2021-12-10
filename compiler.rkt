@@ -262,6 +262,7 @@
   (check-equal? (compile-and-eval '(null? null)) #t)
   (check-equal? (compile-and-eval '(null? ())) #t)
   (check-equal? (compile-and-eval '(cons #\c 1)) (cons #\c 1))
+  (check-equal? (compile-and-eval '(cons 1 (cons 2 (cons 3 4)))) '(1 2 3 . 4))
   (check-equal? (compile-and-eval '(car (cons 1 2))) 1)
   (check-equal? (compile-and-eval '(cdr (cons 1 2))) 2)
   ; string
