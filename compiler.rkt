@@ -210,9 +210,8 @@
   (with-output-to-file "/tmp/scheme.s"
     #:exists 'replace
     (lambda () (compile-program program)))
-  (if debug?
-      (system "clang -g -target arm64-apple-darwin-macho /tmp/scheme.s c/runtime.c c/representation.c")
-      (system "clang -target arm64-apple-darwin-macho /tmp/scheme.s c/runtime.c c/representation.c")))
+  (define cmd "clang -target arm64-apple-darwin-macho /tmp/scheme.s c/runtime.c c/representation.c")
+  (system (if debug? (string-append cmd " -g") cmd)))
 
 (define (compile-and-eval program)
   (compile-to-binary program)
