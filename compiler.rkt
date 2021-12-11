@@ -86,26 +86,28 @@
      (emit "ldr x0, [sp, #~a]" stack-index)]
     [(= < > <= >= char=?)
      (define-label end)
-     (compile-expr (list-ref args 0) stack-index env)
-     (when (eq? op 'char=?)
-       (emit "lsr x0, x0, #~a" char-shift))
-     (emit "mov x8, x0")
-     (compile-expr (list-ref args 1) (- stack-index wordsize) env)
-     (when (eq? op 'char=?)
-       (emit "lsr x0, x0, #~a" char-shift))
-     (emit "cmp x8, x0")
-     (define-label if-true)
-     (case op
-       [(=) (b.eq if-true)]
-       [(<) (b.lt if-true)]
-       [(>) (b.gt if-true)]
-       [(<=) (b.le if-true)]
-       [(>=) (b.ge if-true)]
-       [(char=?) (b.eq if-true)])
-     (emit "mov x0, #~a" (immediate-rep #f))
-     (b end)
-     (label if-true
-            (emit "mov x0, #~a" (immediate-rep #t)))
+     (for ([left args]
+           [right (cdr args)])
+       (compile-expr left stack-index env)
+       (when (eq? op 'char=?)
+         (emit "lsr x0, x0, #~a" char-shift))
+       (emit "mov x8, x0")
+       (compile-expr right (- stack-index wordsize) env)
+       (when (eq? op 'char=?)
+         (emit "lsr x0, x0, #~a" char-shift))
+       (emit "cmp x8, x0")
+       (define-label if-true)
+       (case op
+         [(=) (b.eq if-true)]
+         [(<) (b.lt if-true)]
+         [(>) (b.gt if-true)]
+         [(<=) (b.le if-true)]
+         [(>=) (b.ge if-true)]
+         [(char=?) (b.eq if-true)])
+       (emit "mov x0, #~a" (immediate-rep #f))
+       (b end)
+       (label if-true))
+     (emit "mov x0, #~a" (immediate-rep #t))
      (label end)]
     [(integer? boolean? char? string? vector? zero?)
      (compile-expr (list-ref args 0) stack-index env)
@@ -258,6 +260,7 @@
   (check-equal? (compile-and-eval '(>= 2 2)) #t)
   (check-equal? (compile-and-eval '(>= 3 2)) #t)
   (check-equal? (compile-and-eval '(>= 2 3)) #f)
+  (check-equal? (compile-and-eval '(< 1 2 3 4 5 6 7)) #t)
   (check-equal? (compile-and-eval '(< 2 1)) #f)
   (check-equal? (compile-and-eval '(<= 2 1)) #f)
   (check-equal? (compile-and-eval '(<= 2 2)) #t)
