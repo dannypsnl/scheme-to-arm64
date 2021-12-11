@@ -194,6 +194,15 @@
     [`(,op ,args ...)
      #:when (member op primitive-functions)
      (compile-primitive-call op args stack-index env)]
+    [(or `(list ,lst ...)
+         `(quote ,lst ...))
+     (compile-expr (foldr (λ (v r)
+                            (list 'cons v r))
+                          '()
+                          lst)
+                   stack-index
+                   env)]
+    ; note: keep for function call
     [else (error "unkown expression ~a" e)]))
 
 (define (compile-program program)
@@ -269,6 +278,9 @@
   (check-equal? (compile-and-eval '(cons 1 (cons 2 (cons 3 4)))) '(1 2 3 . 4))
   (check-equal? (compile-and-eval '(car (cons 1 2))) 1)
   (check-equal? (compile-and-eval '(cdr (cons 1 2))) 2)
+  (check-equal? (compile-and-eval '(quote 1 2 3)) '(1 2 3))
+  (check-equal? (compile-and-eval '(list 1 2 3)) '(1 2 3))
+  (check-equal? (compile-and-eval '(list 1 (list 1 2 3) 3)) '(1 (1 2 3) 3))
   ; string
   (check-equal? (compile-and-eval '(make-string 5 #\c)) "ccccc")
   (check-equal? (compile-and-eval '(string-ref (make-string 2 #\q) 1)) #\q)
