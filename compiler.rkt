@@ -144,17 +144,6 @@
     (for ([form body])
       (compile-expr form inner-si inner-env))))
 
-(define (compile-if test t-body f-body stack-index env)
-  (define-label if-true end)
-  (compile-expr test stack-index env)
-  (emit-is-x0-equal-to (immediate-rep #t))
-  (b.eq if-true)
-  (compile-expr f-body stack-index env)
-  (b end)
-  (label if-true
-         (compile-expr t-body stack-index env))
-  (label end))
-
 (define (compile-cond tests bodys stack-index env)
   (define-label end)
   (for ([test tests]
@@ -185,8 +174,17 @@
        (emit "str x0, [x28, #~a]" (* wordsize i)))
      (emit "add x28, x28, #~a" (* wordsize (length vs)))
      (emit "mov x0, x1")]
-    [`(if ,test ,t-body) (compile-if test t-body #f stack-index env)]
-    [`(if ,test ,t-body ,f-body) (compile-if test t-body f-body stack-index env)]
+    [`(if ,test ,t-body) (compile-expr `(if ,test ,t-body #f) stack-index env)]
+    [`(if ,test ,t-body ,f-body)
+     (define-label if-true end)
+     (compile-expr test stack-index env)
+     (emit-is-x0-equal-to (immediate-rep #t))
+     (b.eq if-true)
+     (compile-expr f-body stack-index env)
+     (b end)
+     (label if-true
+            (compile-expr t-body stack-index env))
+     (label end)]
     [`(cond (,tests ,bodys ...) ...)
      (compile-cond tests bodys stack-index env)]
     [`(let ([,ids ,exprs] ...) ,bodys ...)
