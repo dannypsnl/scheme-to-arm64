@@ -9,19 +9,19 @@ A Scheme to Arm64 compiler. The following is usage
 Run single expression
 
 @codeblock|{
-racket main.rkt -e '(< 1 2 3)'
+racket main.rkt -e "(< 1 2 3)"
 }|
 
 Dump disassemble result of the expression
 
 @codeblock|{
-racket main.rkt -e '(< 1 2 3)' -s
+racket main.rkt -e "(< 1 2 3)" -s
 }|
 
 Debug the expression
 
 @codeblock|{
-racket main.rkt -e '(< 1 2 3)' -d
+racket main.rkt -e "(< 1 2 3)" -d
 }|
 
 @section{Wait to implement}
