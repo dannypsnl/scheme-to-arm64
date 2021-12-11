@@ -85,7 +85,7 @@
        (emit "str x1, [sp, #~a]" stack-index))
      (emit "ldr x0, [sp, #~a]" stack-index)]
     [(= < > <= >= char=?)
-     (define-label if-true end)
+     (define-label end)
      (compile-expr (list-ref args 0) stack-index env)
      (when (eq? op 'char=?)
        (emit "lsr x0, x0, #~a" char-shift))
@@ -94,6 +94,7 @@
      (when (eq? op 'char=?)
        (emit "lsr x0, x0, #~a" char-shift))
      (emit "cmp x8, x0")
+     (define-label if-true)
      (case op
        [(=) (b.eq if-true)]
        [(<) (b.lt if-true)]
