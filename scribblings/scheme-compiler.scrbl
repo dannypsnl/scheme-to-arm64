@@ -2,7 +2,7 @@
 @require[@for-label[racket/base]]
 
 @title{scheme-compiler}
-@author{linzizhuan}
+@author{林子篆}
 
 A Scheme to Arm64 compiler. The following is usage
 
