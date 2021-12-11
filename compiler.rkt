@@ -84,6 +84,28 @@
               (emit "sdiv x1, x1, x0")])
        (emit "str x1, [sp, #~a]" stack-index))
      (emit "ldr x0, [sp, #~a]" stack-index)]
+    [(or)
+     (define-label if-true end)
+     (for ([v args])
+       (compile-expr v stack-index env)
+       (emit-is-x0-equal-to (immediate-rep #t))
+       (b.eq if-true))
+     (emit "mov x0, #~a" (immediate-rep #f))
+     (b end)
+     (label if-true
+            (emit "mov x0, #~a" (immediate-rep #t)))
+     (label end)]
+    [(and)
+     (define-label if-true end)
+     (for ([v args])
+       (compile-expr v stack-index env)
+       (emit-is-x0-equal-to (immediate-rep #f))
+       (b.eq if-true))
+     (emit "mov x0, #~a" (immediate-rep #t))
+     (b end)
+     (label if-true
+            (emit "mov x0, #~a" (immediate-rep #f)))
+     (label end)]
     [(= < > <= >= char=?)
      (define-label end)
      (for ([left args]
@@ -253,6 +275,16 @@
   (check-equal? (compile-and-eval '(integer? #f)) #f)
   ; let
   (check-equal? (compile-and-eval '(let ([x 1]) x)) 1)
+  ; logical
+  (check-equal? (compile-and-eval '(and #t #t)) #t)
+  (check-equal? (compile-and-eval '(and #f #t)) #f)
+  (check-equal? (compile-and-eval '(and #t #f)) #f)
+  (check-equal? (compile-and-eval '(and #t #t #t)) #t)
+  (check-equal? (compile-and-eval '(and #t #f #t)) #f)
+  (check-equal? (compile-and-eval '(or #t #f)) #t)
+  (check-equal? (compile-and-eval '(or #t #f #t)) #t)
+  (check-equal? (compile-and-eval '(or #f #t)) #t)
+  (check-equal? (compile-and-eval '(or #f #f)) #f)
   ; comparsion
   (check-equal? (compile-and-eval '(= 1 1)) #t)
   (check-equal? (compile-and-eval '(<= (sub1 10) (* 9 (/ 4 2)))) #t)

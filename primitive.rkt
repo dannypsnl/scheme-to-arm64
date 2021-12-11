@@ -12,6 +12,8 @@
     ; list and pair
     car cdr cons
     null?
+    ; logical
+    and or
     ; comparison operators
     = < > <= >= char=?
     ; type check
