@@ -196,12 +196,7 @@
      (compile-primitive-call op args stack-index env)]
     [(or `(list ,lst ...)
          `(quote ,lst ...))
-     (compile-expr (foldr (λ (v r)
-                            (list 'cons v r))
-                          '()
-                          lst)
-                   stack-index
-                   env)]
+     (compile-expr (foldr (λ (v r) (list 'cons v r)) '() lst) stack-index env)]
     ; note: keep for function call
     [else (error "unkown expression ~a" e)]))
 
