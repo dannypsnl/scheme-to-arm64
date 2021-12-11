@@ -103,8 +103,8 @@
        [(char=?) (b.eq if-true)])
      (emit "mov x0, #~a" (immediate-rep #f))
      (b end)
-     (label if-true)
-     (emit "mov x0, #~a" (immediate-rep #t))
+     (label if-true
+            (emit "mov x0, #~a" (immediate-rep #t)))
      (label end)]
     [(integer? boolean? char? string? vector? zero?)
      (compile-expr (list-ref args 0) stack-index env)
