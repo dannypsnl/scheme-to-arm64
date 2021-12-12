@@ -18,7 +18,7 @@
 #define PAIR_TAG 1
 #define VEC_TAG 2
 #define STR_TAG 3
-#define SYM_TAG 5
+#define VOID_TAG 5
 #define CLOSURE_TAG 6
 
 void show(long x);

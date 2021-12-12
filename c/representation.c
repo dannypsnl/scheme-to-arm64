@@ -14,6 +14,7 @@ void show(long x) {
     } else {
       printf("#f");
     }
+  } else if ((x & PTR_MASK) == VOID_TAG) {
   } else if ((x & PTR_MASK) == PAIR_TAG) {
     long *ptr = (long *)(x - PAIR_TAG);
     if (ptr == NULL) {

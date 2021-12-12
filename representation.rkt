@@ -10,7 +10,8 @@
      (if x
          (bitwise-ior (arithmetic-shift 1 bool-shift) bool-tag)
          bool-tag)]
-    [(null? x) pair-tag]))
+    [(null? x) pair-tag]
+    [(void? x) void-tag]))
 
 (define fixnum-shift 2)
 (define fixnum-mask 3)
@@ -21,7 +22,7 @@
 (define pair-tag 1)
 (define vec-tag 2)
 (define str-tag 3)
-(define sym-tag 5)
+(define void-tag 5)
 (define closure-tag 6)
 
 (define char-mask 255) ; character type mask

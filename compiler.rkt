@@ -185,6 +185,7 @@
 (define (compile-expr e stack-index)
   (match e
     [(or 'null '()) (emit "mov x0, #~a" (immediate-rep null))]
+    ['(void) (emit "mov x0, #~a" (immediate-rep (void)))]
     [(? immediate? e) (emit "mov x0, #~a" (immediate-rep e))]
     [(? symbol? e) (emit "ldr x0, [sp, #~a]" (lookup e))]
     [(or (vector vs ...) `(vector ,vs ...))
