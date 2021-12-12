@@ -10,6 +10,21 @@
 (define wordsize 8)
 (define (immediate? x) (or (integer? x) (char? x) (boolean? x) (null? x)))
 
+(struct Env (m parent) #:transparent)
+(define env (make-parameter (Env (make-hash) #f)))
+(define (new-env m [p (env)])
+  (Env m p))
+(define (lookup name)
+  (define current-env (env))
+  (if (Env-parent current-env)
+      (hash-ref (Env-m current-env) name
+                (lambda ()
+                  (parameterize ([env (Env-parent current-env)])
+                    (lookup name))))
+      (hash-ref (Env-m current-env) name)))
+(define (var-set! name offset)
+  (hash-set! (Env-m (env)) name offset))
+
 (define (emit-is-x0-equal-to val)
   (define-label if-true end)
   (emit "cmp x0, #~a" val)
@@ -19,13 +34,13 @@
   (label if-true)
   (emit "mov x0, #~a" (immediate-rep #t))
   (label end))
-(define (compile-primitive-call op args stack-index env)
+(define (compile-primitive-call op args stack-index)
   (case op
     [(cons)
      ; store car/cdr to heap
-     (compile-expr (car args) stack-index env)
+     (compile-expr (car args) stack-index)
      (emit "str x0, [sp, #~a]" stack-index)
-     (compile-expr (cadr args) (- stack-index wordsize) env)
+     (compile-expr (cadr args) (- stack-index wordsize))
      (emit "ldr x1, [sp, #~a]" stack-index)
      (emit "stp x1, x0, [x28]")
      ; save pointer and tag it
@@ -33,7 +48,7 @@
      ; we used two wordsize from heap
      (emit "add x28, x28, #~a" (* 2 wordsize))]
     [(make-string make-vector)
-     (compile-expr (car args) stack-index env)
+     (compile-expr (car args) stack-index)
      (emit "lsr x0, x0, #~a" fixnum-shift)
      ; store length into new structure
      (emit "str x0, [x28]")
@@ -41,7 +56,7 @@
      (emit "orr x1, x28, #~a" (case op [(make-string) str-tag] [(make-vector) vec-tag]))
      (emit "add x28, x28, #8")
      (when (> (length args) 1)
-       (compile-expr (cadr args) (- stack-index wordsize) env)
+       (compile-expr (cadr args) (- stack-index wordsize))
        (case op [(make-string) (emit "lsr w0, w0, #~a" char-shift)])
        (define k (case op [(make-string) 1] [(make-vector) wordsize]))
        (for ([i (range (car args))])
@@ -49,9 +64,9 @@
        (emit "add x28, x28, #~a" (* k (car args))))
      (emit "mov x0, x1")]
     [(string-ref vector-ref)
-     (compile-expr (car args) stack-index env)
+     (compile-expr (car args) stack-index)
      (emit "add x1, x0, #~a" (- wordsize (case op [(string-ref) str-tag] [(vector-ref) vec-tag])))
-     (compile-expr (cadr args) (- stack-index wordsize) env)
+     (compile-expr (cadr args) (- stack-index wordsize))
      ; get index, so now index is in x0
      ; x1 is current pointer, x1 <- x1 + x0>>shift is offset of value
      (emit "add x1, x1, x0, lsr #~a" (case op [(string-ref) fixnum-shift] [(vector-ref) (+ fixnum-shift 2)]))
@@ -60,20 +75,20 @@
        [(string-ref) (emit "lsl x0, x0, #~a" char-shift)
                      (emit "orr x0, x0, #~a" char-tag)])]
     [(string-length vector-length)
-     (compile-expr (car args) stack-index env)
+     (compile-expr (car args) stack-index)
      (emit "sub x0, x0, #~a" (case op [(string-length) str-tag] [(vector-length) vec-tag]))
      (emit "ldr x0, [x0]")
      (emit "lsl x0, x0, #~a" fixnum-shift)]
     [(add1 sub1)
-     (compile-expr (car args) stack-index env)
+     (compile-expr (car args) stack-index)
      (case op
        [(add1) (emit "add x0, x0, #~a" (immediate-rep 1))]
        [(sub1) (emit "sub x0, x0, #~a" (immediate-rep 1))])]
     [(+ - * /)
-     (compile-expr (car args) stack-index env)
+     (compile-expr (car args) stack-index)
      (emit "str x0, [sp, #~a]" stack-index)
      (for ([v (cdr args)])
-       (compile-expr v (- stack-index wordsize) env)
+       (compile-expr v (- stack-index wordsize))
        (emit "ldr x1, [sp, #~a]" stack-index)
        (case op
          [(+) (emit "add x1, x1, x0")]
@@ -87,7 +102,7 @@
     [(or)
      (define-label if-true end)
      (for ([v args])
-       (compile-expr v stack-index env)
+       (compile-expr v stack-index)
        (emit-is-x0-equal-to (immediate-rep #t))
        (b.eq if-true))
      (emit "mov x0, #~a" (immediate-rep #f))
@@ -98,7 +113,7 @@
     [(and)
      (define-label if-true end)
      (for ([v args])
-       (compile-expr v stack-index env)
+       (compile-expr v stack-index)
        (emit-is-x0-equal-to (immediate-rep #f))
        (b.eq if-true))
      (emit "mov x0, #~a" (immediate-rep #t))
@@ -110,11 +125,11 @@
      (define-label end)
      (for ([left args]
            [right (cdr args)])
-       (compile-expr left stack-index env)
+       (compile-expr left stack-index)
        (when (eq? op 'char=?)
          (emit "lsr x0, x0, #~a" char-shift))
        (emit "mov x8, x0")
-       (compile-expr right (- stack-index wordsize) env)
+       (compile-expr right (- stack-index wordsize))
        (when (eq? op 'char=?)
          (emit "lsr x0, x0, #~a" char-shift))
        (emit "cmp x8, x0")
@@ -132,7 +147,7 @@
      (emit "mov x0, #~a" (immediate-rep #t))
      (label end)]
     [(integer? boolean? char? string? vector? zero?)
-     (compile-expr (car args) stack-index env)
+     (compile-expr (car args) stack-index)
      (case op
        [(integer?) (emit "and x0, x0, #~a" fixnum-mask)
                    (emit-is-x0-equal-to 0)]
@@ -146,75 +161,74 @@
                   (emit-is-x0-equal-to vec-tag)]
        [(zero?) (emit-is-x0-equal-to 0)])]
     [(null? car cdr)
-     (compile-expr (car args) stack-index env)
+     (compile-expr (car args) stack-index)
      (case op
        [(car) (emit "ldr x0, [x0, #~a]" (- pair-tag))]
        [(cdr) (emit "ldr x0, [x0, #~a]" (- wordsize pair-tag))]
        [(null?) (emit-is-x0-equal-to pair-tag)])]))
 
-(define (compile-cond tests bodys stack-index env)
+(define (compile-cond tests bodys stack-index)
   (define-label end)
   (for ([test tests]
         [exprs bodys])
     (define-label body-tag next)
-    (compile-expr test stack-index env)
+    (compile-expr test stack-index)
     (emit-is-x0-equal-to (immediate-rep #t))
     (b.ne next)
     (label body-tag
            (for ([expr exprs])
-             (compile-expr expr stack-index env))
+             (compile-expr expr stack-index))
            (b end))
     (label next))
   (label end))
 
-(define (compile-expr e stack-index env)
+(define (compile-expr e stack-index)
   (match e
     [(or 'null '()) (emit "mov x0, #~a" (immediate-rep null))]
     [(? immediate? e) (emit "mov x0, #~a" (immediate-rep e))]
-    [(? symbol? e) (emit "ldr x0, [sp, #~a]" (cdr (assoc e env)))]
+    [(? symbol? e) (emit "ldr x0, [sp, #~a]" (lookup e))]
     [(or (vector vs ...) `(vector ,vs ...))
      (emit "mov x0, #~a" (length vs))
      (emit "str x0, [x28]")
      (emit "orr x1, x28, #~a" vec-tag)
      (emit "add x28, x28, #~a" wordsize)
      (for ([v vs] [i (range (length vs))])
-       (compile-expr v stack-index env)
+       (compile-expr v stack-index)
        (emit "str x0, [x28, #~a]" (* wordsize i)))
      (emit "add x28, x28, #~a" (* wordsize (length vs)))
      (emit "mov x0, x1")]
-    [`(if ,test ,t-body) (compile-expr `(if ,test ,t-body #f) stack-index env)]
+    [`(if ,test ,t-body) (compile-expr `(if ,test ,t-body #f) stack-index)]
     [`(if ,test ,t-body ,f-body)
      (define-label if-true end)
-     (compile-expr test stack-index env)
+     (compile-expr test stack-index)
      (emit-is-x0-equal-to (immediate-rep #t))
      (b.eq if-true)
-     (compile-expr f-body stack-index env)
+     (compile-expr f-body stack-index)
      (b end)
      (label if-true
-            (compile-expr t-body stack-index env))
+            (compile-expr t-body stack-index))
      (label end)]
     [`(cond (,tests ,bodys ...) ...)
-     (compile-cond tests bodys stack-index env)]
+     (compile-cond tests bodys stack-index)]
     [`(let ([,names ,exprs] ...) ,bodys ...)
      (let* ([stack-offsets
              (map (lambda (x) (- stack-index (* x wordsize)))
                   (range 0 (length names)))]
-            [inner-si (- stack-index (* (length names) wordsize))]
-            [inner-env (append (map cons names stack-offsets) env)])
+            [inner-si (- stack-index (* (length names) wordsize))])
        ; evaluate exprs and assign them to stack locations
        (for ([expr exprs]
              [offset stack-offsets])
-         (compile-expr expr inner-si env)
+         (compile-expr expr inner-si)
          (emit "str x0, [sp, #~a]" offset))
-       ; evaluate all body forms - this will leave the last one's output in x0
        (for ([form bodys])
-         (compile-expr form inner-si inner-env)))]
+         (parameterize ([env (new-env (make-hash (map cons names stack-offsets)))])
+           (compile-expr form inner-si))))]
     [`(,op ,args ...)
      #:when (member op primitive-functions)
-     (compile-primitive-call op args stack-index env)]
+     (compile-primitive-call op args stack-index)]
     [(or `(list ,lst ...)
          `(quote ,lst ...))
-     (compile-expr (foldr (λ (v r) (list 'cons v r)) '() lst) stack-index env)]
+     (compile-expr (foldr (λ (v r) (list 'cons v r)) '() lst) stack-index)]
     ; note: keep for function call
     [else (error "unkown expression ~a" e)]))
 
@@ -225,7 +239,7 @@
   (emit "_scheme_entry:")
 
   (emit "mov x28, x0")
-  (compile-expr program (- wordsize) '())
+  (compile-expr program (- wordsize))
   (emit "ret"))
 
 (define (compile-to-binary program [debug? #f])
@@ -271,6 +285,10 @@
   (check-equal? (compile-and-eval '(integer? #f)) #f)
   ; let
   (check-equal? (compile-and-eval '(let ([x 1]) x)) 1)
+  (check-equal? (compile-and-eval '(let ([x 1])
+                                     (let ([y (* 2 x)])
+                                       (cons x y))))
+                '(1 . 2))
   ; logical
   (check-equal? (compile-and-eval '(and #t #t)) #t)
   (check-equal? (compile-and-eval '(and #f #t)) #f)
