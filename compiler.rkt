@@ -152,22 +152,6 @@
        [(cdr) (emit "ldr x0, [x0, #~a]" (- wordsize pair-tag))]
        [(null?) (emit-is-x0-equal-to pair-tag)])]))
 
-(define (compile-let names exprs body stack-index env)
-  (let* ([stack-offsets
-          (map (lambda (x) (- stack-index (* x wordsize)))
-               (range 0 (length names)))]
-         [inner-si (- stack-index (* (length names) wordsize))]
-         [inner-env (append (map cons names stack-offsets) env)])
-    ; evaluate exprs and assign them to stack locations
-    (for ([expr exprs]
-          [offset stack-offsets])
-      (compile-expr expr inner-si env)
-      (emit "str x0, [sp, #~a]" offset))
-
-    ; evaluate all body forms - this will leave the last one's output in x0
-    (for ([form body])
-      (compile-expr form inner-si inner-env))))
-
 (define (compile-cond tests bodys stack-index env)
   (define-label end)
   (for ([test tests]
@@ -211,8 +195,20 @@
      (label end)]
     [`(cond (,tests ,bodys ...) ...)
      (compile-cond tests bodys stack-index env)]
-    [`(let ([,ids ,exprs] ...) ,bodys ...)
-     (compile-let ids exprs bodys stack-index env)]
+    [`(let ([,names ,exprs] ...) ,bodys ...)
+     (let* ([stack-offsets
+             (map (lambda (x) (- stack-index (* x wordsize)))
+                  (range 0 (length names)))]
+            [inner-si (- stack-index (* (length names) wordsize))]
+            [inner-env (append (map cons names stack-offsets) env)])
+       ; evaluate exprs and assign them to stack locations
+       (for ([expr exprs]
+             [offset stack-offsets])
+         (compile-expr expr inner-si env)
+         (emit "str x0, [sp, #~a]" offset))
+       ; evaluate all body forms - this will leave the last one's output in x0
+       (for ([form bodys])
+         (compile-expr form inner-si inner-env)))]
     [`(,op ,args ...)
      #:when (member op primitive-functions)
      (compile-primitive-call op args stack-index env)]
