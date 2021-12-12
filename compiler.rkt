@@ -23,9 +23,9 @@
   (case op
     [(cons)
      ; store car/cdr to heap
-     (compile-expr (list-ref args 0) stack-index env)
+     (compile-expr (car args) stack-index env)
      (emit "str x0, [sp, #~a]" stack-index)
-     (compile-expr (list-ref args 1) (- stack-index wordsize) env)
+     (compile-expr (cadr args) (- stack-index wordsize) env)
      (emit "ldr x1, [sp, #~a]" stack-index)
      (emit "stp x1, x0, [x28]")
      ; save pointer and tag it
@@ -33,7 +33,7 @@
      ; we used two wordsize from heap
      (emit "add x28, x28, #~a" (* 2 wordsize))]
     [(make-string make-vector)
-     (compile-expr (list-ref args 0) stack-index env)
+     (compile-expr (car args) stack-index env)
      (emit "lsr x0, x0, #~a" fixnum-shift)
      ; store length into new structure
      (emit "str x0, [x28]")
@@ -41,17 +41,17 @@
      (emit "orr x1, x28, #~a" (case op [(make-string) str-tag] [(make-vector) vec-tag]))
      (emit "add x28, x28, #8")
      (when (> (length args) 1)
-       (compile-expr (list-ref args 1) (- stack-index wordsize) env)
+       (compile-expr (cadr args) (- stack-index wordsize) env)
        (case op [(make-string) (emit "lsr w0, w0, #~a" char-shift)])
        (define k (case op [(make-string) 1] [(make-vector) wordsize]))
-       (for ([i (range (list-ref args 0))])
+       (for ([i (range (car args))])
          (emit "str x0, [x28, #~a]" (* k i)))
-       (emit "add x28, x28, #~a" (* k (list-ref args 0))))
+       (emit "add x28, x28, #~a" (* k (car args))))
      (emit "mov x0, x1")]
     [(string-ref vector-ref)
-     (compile-expr (list-ref args 0) stack-index env)
+     (compile-expr (car args) stack-index env)
      (emit "add x1, x0, #~a" (- wordsize (case op [(string-ref) str-tag] [(vector-ref) vec-tag])))
-     (compile-expr (list-ref args 1) (- stack-index wordsize) env)
+     (compile-expr (cadr args) (- stack-index wordsize) env)
      ; get index, so now index is in x0
      ; x1 is current pointer, x1 <- x1 + x0>>shift is offset of value
      (emit "add x1, x1, x0, lsr #~a" (case op [(string-ref) fixnum-shift] [(vector-ref) (+ fixnum-shift 2)]))
@@ -60,17 +60,17 @@
        [(string-ref) (emit "lsl x0, x0, #~a" char-shift)
                      (emit "orr x0, x0, #~a" char-tag)])]
     [(string-length vector-length)
-     (compile-expr (list-ref args 0) stack-index env)
+     (compile-expr (car args) stack-index env)
      (emit "sub x0, x0, #~a" (case op [(string-length) str-tag] [(vector-length) vec-tag]))
      (emit "ldr x0, [x0]")
      (emit "lsl x0, x0, #~a" fixnum-shift)]
     [(add1 sub1)
-     (compile-expr (list-ref args 0) stack-index env)
+     (compile-expr (car args) stack-index env)
      (case op
        [(add1) (emit "add x0, x0, #~a" (immediate-rep 1))]
        [(sub1) (emit "sub x0, x0, #~a" (immediate-rep 1))])]
     [(+ - * /)
-     (compile-expr (list-ref args 0) stack-index env)
+     (compile-expr (car args) stack-index env)
      (emit "str x0, [sp, #~a]" stack-index)
      (for ([v (cdr args)])
        (compile-expr v (- stack-index wordsize) env)
@@ -132,7 +132,7 @@
      (emit "mov x0, #~a" (immediate-rep #t))
      (label end)]
     [(integer? boolean? char? string? vector? zero?)
-     (compile-expr (list-ref args 0) stack-index env)
+     (compile-expr (car args) stack-index env)
      (case op
        [(integer?) (emit "and x0, x0, #~a" fixnum-mask)
                    (emit-is-x0-equal-to 0)]
@@ -146,7 +146,7 @@
                   (emit-is-x0-equal-to vec-tag)]
        [(zero?) (emit-is-x0-equal-to 0)])]
     [(null? car cdr)
-     (compile-expr (list-ref args 0) stack-index env)
+     (compile-expr (car args) stack-index env)
      (case op
        [(car) (emit "ldr x0, [x0, #~a]" (- pair-tag))]
        [(cdr) (emit "ldr x0, [x0, #~a]" (- wordsize pair-tag))]
