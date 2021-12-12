@@ -212,6 +212,7 @@
      (compile-cond tests bodys stack-index)]
     [`(define ,name ,expr)
      (compile-expr expr stack-index)
+     ;;; FIXME: stack-index have to grow at here
      (define var-offset (- stack-index wordsize))
      (emit "str x0, [sp, #~a]" var-offset)
      (parameterize ([env (Env-parent (env))])
@@ -289,11 +290,16 @@
   (check-equal? (compile-and-eval '(boolean? 1)) #f)
   (check-equal? (compile-and-eval '(integer? 1)) #t)
   (check-equal? (compile-and-eval '(integer? #f)) #f)
-  ; let
+  ; let and define
   (check-equal? (compile-and-eval '(let ([x 1]) x)) 1)
   (check-equal? (compile-and-eval '(let ([x 1])
                                      (let ([y (* 2 x)])
                                        (cons x y))))
+                '(1 . 2))
+  (check-equal? (compile-and-eval '(let ()
+                                     (define x 1)
+                                     (define y 2)
+                                     (cons x y)))
                 '(1 . 2))
   ; logical
   (check-equal? (compile-and-eval '(and #t #t)) #t)
