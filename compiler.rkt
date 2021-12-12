@@ -12,7 +12,7 @@
 
 (struct Env (m parent) #:transparent)
 (define env (make-parameter (Env (make-hash) #f)))
-(define (new-env m [p (env)])
+(define (make-env m [p (env)])
   (Env m p))
 (define (lookup name)
   (define current-env (env))
@@ -210,6 +210,12 @@
      (label end)]
     [`(cond (,tests ,bodys ...) ...)
      (compile-cond tests bodys stack-index)]
+    [`(define ,name ,expr)
+     (compile-expr expr stack-index)
+     (define var-offset (- stack-index wordsize))
+     (emit "str x0, [sp, #~a]" var-offset)
+     (parameterize ([env (Env-parent (env))])
+       (var-set! name var-offset))]
     [`(let ([,names ,exprs] ...) ,bodys ...)
      (let* ([stack-offsets
              (map (lambda (x) (- stack-index (* x wordsize)))
@@ -221,7 +227,7 @@
          (compile-expr expr inner-si)
          (emit "str x0, [sp, #~a]" offset))
        (for ([form bodys])
-         (parameterize ([env (new-env (make-hash (map cons names stack-offsets)))])
+         (parameterize ([env (make-env (make-hash (map cons names stack-offsets)))])
            (compile-expr form inner-si))))]
     [`(,op ,args ...)
      #:when (member op primitive-functions)
