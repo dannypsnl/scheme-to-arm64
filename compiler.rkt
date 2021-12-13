@@ -210,11 +210,10 @@
      (label end)]
     [`(define ,name ,expr)
      (compile-expr expr stack-index)
-     ;;; FIXME: stack-index have to grow at here
-     (define var-offset (- stack-index wordsize))
-     (emit "str x0, [sp, #~a]" var-offset)
+     (emit "str x0, [sp, #~a]" stack-index)
      (parameterize ([env (Env-parent (env))])
-       (var-set! name var-offset))]
+       (var-set! name stack-index))
+     (- stack-index wordsize)]
     [`(let ([,names ,exprs] ...) ,bodys ...)
      (let ([stack-offsets
             (map (lambda (x) (- stack-index (* x wordsize)))
@@ -225,9 +224,11 @@
              [offset stack-offsets])
          (compile-expr expr inner-si)
          (emit "str x0, [sp, #~a]" offset))
-       (for ([form bodys])
+       (for ([body bodys])
          (parameterize ([env (make-env (make-hash (map cons names stack-offsets)))])
-           (compile-expr form inner-si))))]
+           (define maybe-offset (compile-expr body inner-si))
+           (when (number? maybe-offset)
+             (set! inner-si maybe-offset)))))]
     [`(,op ,args ...)
      #:when (member op primitive-functions)
      (compile-primitive-call op args stack-index)]
@@ -294,11 +295,11 @@
                                      (let ([y (* 2 x)])
                                        (cons x y))))
                 '(1 . 2))
-  #;(check-equal? (compile-and-eval '(let ()
-                                       (define x 1)
-                                       (define y 2)
-                                       (cons x y)))
-                  '(1 . 2))
+  (check-equal? (compile-and-eval '(let ()
+                                     (define x 1)
+                                     (define y 2)
+                                     (cons x y)))
+                '(1 . 2))
   ; logical
   (check-equal? (compile-and-eval '(and #t #t)) #t)
   (check-equal? (compile-and-eval '(and #f #t)) #f)
