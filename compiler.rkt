@@ -216,10 +216,10 @@
      (parameterize ([env (Env-parent (env))])
        (var-set! name var-offset))]
     [`(let ([,names ,exprs] ...) ,bodys ...)
-     (let* ([stack-offsets
-             (map (lambda (x) (- stack-index (* x wordsize)))
-                  (range 0 (length names)))]
-            [inner-si (- stack-index (* (length names) wordsize))])
+     (let ([stack-offsets
+            (map (lambda (x) (- stack-index (* x wordsize)))
+                 (range 0 (length names)))]
+           [inner-si (- stack-index (* (length names) wordsize))])
        ; evaluate exprs and assign them to stack locations
        (for ([expr exprs]
              [offset stack-offsets])
