@@ -167,21 +167,6 @@
        [(cdr) (emit "ldr x0, [x0, #~a]" (- wordsize pair-tag))]
        [(null?) (emit-is-x0-equal-to pair-tag)])]))
 
-(define (compile-cond tests bodys stack-index)
-  (define-label end)
-  (for ([test tests]
-        [exprs bodys])
-    (define-label body-tag next)
-    (compile-expr test stack-index)
-    (emit-is-x0-equal-to (immediate-rep #t))
-    (b.ne next)
-    (label body-tag
-           (for ([expr exprs])
-             (compile-expr expr stack-index))
-           (b end))
-    (label next))
-  (label end))
-
 (define (compile-expr e stack-index)
   (match e
     [(or 'null '()) (emit "mov x0, #~a" (immediate-rep null))]
@@ -210,7 +195,19 @@
             (compile-expr t-body stack-index))
      (label end)]
     [`(cond (,tests ,bodys ...) ...)
-     (compile-cond tests bodys stack-index)]
+     (define-label end)
+     (for ([test tests]
+           [exprs bodys])
+       (define-label body-tag next)
+       (compile-expr test stack-index)
+       (emit-is-x0-equal-to (immediate-rep #t))
+       (b.ne next)
+       (label body-tag
+              (for ([expr exprs])
+                (compile-expr expr stack-index))
+              (b end))
+       (label next))
+     (label end)]
     [`(define ,name ,expr)
      (compile-expr expr stack-index)
      ;;; FIXME: stack-index have to grow at here
