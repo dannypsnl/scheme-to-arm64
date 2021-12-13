@@ -10,7 +10,9 @@
 (define wordsize 8)
 (define (immediate? x) (or (integer? x) (char? x) (boolean? x) (null? x)))
 
-(struct Env (m parent) #:transparent)
+(struct Env (m parent)
+  #:mutable
+  #:transparent)
 (define env (make-parameter (Env (make-hash) #f)))
 (define (make-env m [p (env)])
   (Env m p))
@@ -203,16 +205,19 @@
        (emit-is-x0-equal-to (immediate-rep #t))
        (b.ne next)
        (label body-tag
-              (for ([expr exprs])
-                (compile-expr expr stack-index))
-              (b end))
+              (parameterize ([env (make-env (make-hash))])
+                (define local-stack-index stack-index)
+                (for ([expr exprs])
+                  (define new-index (compile-expr expr local-stack-index))
+                  (when (number? new-index)
+                    (set! local-stack-index new-index)))
+                (b end)))
        (label next))
      (label end)]
     [`(define ,name ,expr)
      (compile-expr expr stack-index)
      (emit "str x0, [sp, #~a]" stack-index)
-     (parameterize ([env (Env-parent (env))])
-       (var-set! name stack-index))
+     (var-set! name stack-index)
      (- stack-index wordsize)]
     [`(let ([,names ,exprs] ...) ,bodys ...)
      (let ([stack-offsets
@@ -224,8 +229,8 @@
              [offset stack-offsets])
          (compile-expr expr inner-si)
          (emit "str x0, [sp, #~a]" offset))
-       (for ([body bodys])
-         (parameterize ([env (make-env (make-hash (map cons names stack-offsets)))])
+       (parameterize ([env (make-env (make-hash (map cons names stack-offsets)))])
+         (for ([body bodys])
            (define maybe-offset (compile-expr body inner-si))
            (when (number? maybe-offset)
              (set! inner-si maybe-offset)))))]
@@ -280,6 +285,9 @@
                                      [(= (- 2 1) 1) 1]
                                      [#t 2]))
                 1)
+  (check-equal? (compile-and-eval '(cond [#t (define x 2)
+                                             x]))
+                2)
   ; type check
   (check-equal? (compile-and-eval '(char=? #\c #\a)) #f)
   (check-equal? (compile-and-eval '(char=? #\b #\b)) #t)
