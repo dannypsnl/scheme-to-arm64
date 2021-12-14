@@ -35,7 +35,10 @@
                (sdiv dst src v)
                (mov dst imme-value)
                (mov dst src)
-               (b label-name))
+               (cmp reg v)
+               (b label-name)
+               (b.eq label-name)
+               )
   (Program [p]
            (inst* ...)))
 
@@ -55,8 +58,11 @@
                [(sdiv ,dst ,src ,v) (emit "sdiv ~a, ~a, ~a" dst src (Value v))]
                [(mov ,dst ,imme-value) (emit "mov ~a, #~a" dst imme-value)]
                [(mov ,dst ,src) (emit "mov ~a, ~a" dst src)]
+               [(cmp ,reg ,v) (emit "cmp ~a, ~a" reg (Value v))]
                [(b ,label-name) (emit "b ~a" label-name)]
-               [else (emit "// ignored ~a" i)]])
+               [(b.eq ,label-name) (emit "b.eq ~a" label-name)]
+               [else (emit "// ignored ~a" i)]
+               ])
 (define-pass emit-program : (arm64 Program) (p) -> * ()
   [Program : Program (p) -> * ()
            [(,inst* ...)

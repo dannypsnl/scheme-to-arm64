@@ -3,13 +3,28 @@
 (require "env.rkt"
          "representation.rkt"
          "lang/scheme.rkt"
-         "lang/arm64.rkt")
+         "lang/arm64.rkt"
+         syntax/parse/define)
+
+(define-syntax-parser define-label
+  [(_ label-names ...)
+   #'(begin
+       (define label-names (gensym 'LLB)) ...)])
 
 (define wordsize 8)
 
 (define-pass compile-scm : (scm/Final Expr) (e si) -> (arm64 Instruction) ()
-  (definitions
-    (define stack-index si))
+  (definitions (define stack-index si))
+  (emit-is-x0-equal-to : Expr (e) -> Instruction ()
+                       [,c (define-label if-true end)
+                           (list
+                            `(cmp x0 ,c)
+                            `(b.eq ,if-true)
+                            `(mov x0 ,(immediate-rep #f))
+                            `(b ,end)
+                            `(label ,if-true)
+                            `(mov x0 ,(immediate-rep #t))
+                            `(label ,end))])
   (Expr : Expr (e) -> Instruction ()
         [,name `(ldr x0 [sp ,(lookup name)])]
         [,c `(mov x0 ,(immediate-rep c))]
@@ -26,6 +41,16 @@
              (Expr e)))]
         [(let ([,name* ,e*] ...) ,body)
          `(comment "ignore")]
+        [(if ,e0 ,e1 ,e2)
+         (define-label if-true end)
+         (list (Expr e0)
+               (emit-is-x0-equal-to (immediate-rep #t))
+               `(b.eq ,if-true)
+               (Expr e2)
+               `(b ,end)
+               `(label ,if-true)
+               (Expr e1)
+               `(label ,end))]
         [(,e0 ,e1 ...)
          (define op e0)
          (case op
@@ -47,7 +72,8 @@
                                             `(sdiv x1 x1 x0)])
                                      `(str x1 [sp ,stack-index])))
                              `(ldr x0 [sp ,stack-index]))]
-           [else `(comment "todo function call")])]))
+           [else `(comment "todo function call")])])
+  (Expr e))
 (define-pass convert : (arm64 Instruction) (i) -> (arm64 Program) ()
   (if (list? i)
       `(,(flatten i) ...)
@@ -82,10 +108,10 @@
   (check-equal? (compile-and-eval '(+ 1 2 3)) 6)
   (check-equal? (compile-and-eval '(- 1 2 3)) -4)
   ; conditional
-  ; (check-equal? (compile-and-eval '(if #f 1)) #f)
-  ; (check-equal? (compile-and-eval '(if #t 1)) 1)
-  ; (check-equal? (compile-and-eval '(if #t 1 2)) 1)
-  ; (check-equal? (compile-and-eval '(if #f 1 2)) 2)
+  (check-equal? (compile-and-eval '(if #f 1)) #f)
+  (check-equal? (compile-and-eval '(if #t 1)) 1)
+  (check-equal? (compile-and-eval '(if #t 1 2)) 1)
+  (check-equal? (compile-and-eval '(if #f 1 2)) 2)
   ; (check-equal? (compile-and-eval '(cond
   ;                                    [(= (- 2 1) 1) 1]
   ;                                    [#t 2]))

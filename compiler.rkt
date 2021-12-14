@@ -11,7 +11,6 @@
 (define wordsize 8)
 (define (immediate? x) (or (integer? x) (char? x) (boolean? x) (null? x)))
 
-
 (define (emit-is-x0-equal-to val)
   (define-label if-true end)
   (emit "cmp x0, #~a" val)
@@ -150,17 +149,6 @@
        (emit "str x0, [x28, #~a]" (* wordsize i)))
      (emit "add x28, x28, #~a" (* wordsize (length vs)))
      (emit "mov x0, x1")]
-    [`(if ,test ,t-body) (compile-expr `(if ,test ,t-body #f) stack-index)]
-    [`(if ,test ,t-body ,f-body)
-     (define-label if-true end)
-     (compile-expr test stack-index)
-     (emit-is-x0-equal-to (immediate-rep #t))
-     (b.eq if-true)
-     (compile-expr f-body stack-index)
-     (b end)
-     (label if-true
-            (compile-expr t-body stack-index))
-     (label end)]
     [`(cond (,tests ,bodys ...) ...)
      (define-label end)
      (for ([test tests]
@@ -235,12 +223,6 @@
 (module+ test
   (require rackunit)
 
-  ; arithmetic
-  (check-equal? (compile-and-eval '1) 1)
-  (check-equal? (compile-and-eval '(add1 1)) 2)
-  (check-equal? (compile-and-eval '(+ 1 1)) 2)
-  (check-equal? (compile-and-eval '(+ 1 2 3)) 6)
-  (check-equal? (compile-and-eval '(- 1 2 3)) -4)
   ; conditional
   (check-equal? (compile-and-eval '(if #f 1)) #f)
   (check-equal? (compile-and-eval '(if #t 1)) 1)
