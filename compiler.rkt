@@ -3,29 +3,14 @@
 (provide compile-program
          compile-to-binary)
 
-(require "emit.rkt"
+(require "env.rkt"
+         "emit.rkt"
          "representation.rkt"
          "primitive.rkt")
 
 (define wordsize 8)
 (define (immediate? x) (or (integer? x) (char? x) (boolean? x) (null? x)))
 
-(struct Env (m parent)
-  #:mutable
-  #:transparent)
-(define env (make-parameter (Env (make-hash) #f)))
-(define (make-env m [p (env)])
-  (Env m p))
-(define (lookup name)
-  (define current-env (env))
-  (if (Env-parent current-env)
-      (hash-ref (Env-m current-env) name
-                (lambda ()
-                  (parameterize ([env (Env-parent current-env)])
-                    (lookup name))))
-      (hash-ref (Env-m current-env) name)))
-(define (var-set! name offset)
-  (hash-set! (Env-m (env)) name offset))
 
 (define (emit-is-x0-equal-to val)
   (define-label if-true end)
