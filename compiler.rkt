@@ -110,10 +110,6 @@
 
 (define (compile-expr e stack-index)
   (match e
-    [(or 'null '()) (emit "mov x0, #~a" (immediate-rep null))]
-    ['(void) (emit "mov x0, #~a" (immediate-rep (void)))]
-    [(? immediate? e) (emit "mov x0, #~a" (immediate-rep e))]
-    [(? symbol? e) (emit "ldr x0, [sp, #~a]" (lookup e))]
     [(or (vector vs ...) `(vector ,vs ...))
      (emit "mov x0, #~a" (length vs))
      (emit "str x0, [x28]")
@@ -124,11 +120,6 @@
        (emit "str x0, [x28, #~a]" (* wordsize i)))
      (emit "add x28, x28, #~a" (* wordsize (length vs)))
      (emit "mov x0, x1")]
-    [`(define ,name ,expr)
-     (compile-expr expr stack-index)
-     (emit "str x0, [sp, #~a]" stack-index)
-     (var-set! name stack-index)
-     (- stack-index wordsize)]
     [`(let ([,names ,exprs] ...) ,bodys ...)
      (let ([stack-offsets
             (map (lambda (x) (- stack-index (* x wordsize)))

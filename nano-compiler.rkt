@@ -26,7 +26,9 @@
                             `(mov x0 ,(immediate-rep #t))
                             `(label ,end))])
   (Expr : Expr (e) -> Instruction ()
-        [,name `(ldr x0 [sp ,(lookup name)])]
+        [,name (case name
+                 [(null) `(mov x0 ,(immediate-rep null))]
+                 [else `(ldr x0 [sp ,(lookup name)])])]
         [,c `(mov x0 ,(immediate-rep c))]
         [(define ,name ,e)
          (define ret
@@ -73,20 +75,24 @@
                               (case op
                                 [(add1) `(add x0 x0 ,(immediate-rep 1))]
                                 [(sub1) `(sub x0 x0 ,(immediate-rep 1))]))]
-           [(+ - * /)  (list (Expr (car e1))
-                             `(str x0 [sp ,stack-index])
-                             (for/list ([v (cdr e1)])
-                               (list (Expr v)
-                                     `(ldr x1 [sp ,stack-index])
-                                     (case op
-                                       [(+) `(add x1 x1 x0)]
-                                       [(-) `(sub x1 x1 x0)]
-                                       [(*) `(lsr x0 x0 ,fixnum-shift)
-                                            `(mul x1 x1 x0)]
-                                       [(/) `(lsr x0 x0 ,fixnum-shift)
-                                            `(sdiv x1 x1 x0)])
-                                     `(str x1 [sp ,stack-index])))
-                             `(ldr x0 [sp ,stack-index]))]
+           [(+ - * /) (list
+                       (Expr (car e1))
+                       `(str x0 [sp ,stack-index])
+                       (for/list ([v (cdr e1)])
+                         (set! stack-index (- stack-index wordsize))
+                         (define e (Expr v))
+                         (set! stack-index (+ stack-index wordsize))
+                         (list e
+                               `(ldr x1 [sp ,stack-index])
+                               (case op
+                                 [(+) `(add x1 x1 x0)]
+                                 [(-) `(sub x1 x1 x0)]
+                                 [(*) `(lsr x0 x0 ,fixnum-shift)
+                                      `(mul x1 x1 x0)]
+                                 [(/) `(lsr x0 x0 ,fixnum-shift)
+                                      `(sdiv x1 x1 x0)])
+                               `(str x1 [sp ,stack-index])))
+                       `(ldr x0 [sp ,stack-index]))]
            [(= < > <= >= char=?)
             (define-label end)
             (append
@@ -112,6 +118,7 @@
                 `(label ,if-true)))
              (list `(mov x0 ,(immediate-rep #t))
                    `(label ,end)))]
+           [(void) `(mov x0 ,(immediate-rep (void)))]
            [else `(comment "todo function call")])])
   (Expr e))
 (define-pass convert : (arm64 Instruction) (i) -> (arm64 Program) ()
@@ -148,7 +155,7 @@
   (check-equal? (compile-and-eval '(+ 1 2 3)) 6)
   (check-equal? (compile-and-eval '(- 1 2 3)) -4)
   ; conditional
-  (check-equal? (compile-and-eval '(if #f 1)) #f)
+  (check-equal? (compile-and-eval '(if #f 1)) eof) ; since we will get a #<void> which prints nothing
   (check-equal? (compile-and-eval '(if #t 1)) 1)
   (check-equal? (compile-and-eval '(if #t 1 2)) 1)
   (check-equal? (compile-and-eval '(if #f 1 2)) 2)
@@ -190,20 +197,20 @@
   ; (check-equal? (compile-and-eval '(or #f #t)) #t)
   ; (check-equal? (compile-and-eval '(or #f #f)) #f)
   ; comparsion
-  ; (check-equal? (compile-and-eval '(= 1 1)) #t)
-  ; (check-equal? (compile-and-eval '(<= (sub1 10) (* 9 (/ 4 2)))) #t)
-  ; (check-equal? (compile-and-eval '(> 2 1)) #t)
-  ; (check-equal? (compile-and-eval '(>= 2 2)) #t)
-  ; (check-equal? (compile-and-eval '(>= 3 2)) #t)
-  ; (check-equal? (compile-and-eval '(>= 2 3)) #f)
-  ; (check-equal? (compile-and-eval '(< 1 2 3 4 5 6 7)) #t)
-  ; (check-equal? (compile-and-eval '(< 2 1)) #f)
-  ; (check-equal? (compile-and-eval '(<= 2 1)) #f)
-  ; (check-equal? (compile-and-eval '(<= 2 2)) #t)
+  (check-equal? (compile-and-eval '(= 1 1)) #t)
+  (check-equal? (compile-and-eval '(<= (sub1 10) (* 9 (/ 4 2)))) #t)
+  (check-equal? (compile-and-eval '(> 2 1)) #t)
+  (check-equal? (compile-and-eval '(>= 2 2)) #t)
+  (check-equal? (compile-and-eval '(>= 3 2)) #t)
+  (check-equal? (compile-and-eval '(>= 2 3)) #f)
+  (check-equal? (compile-and-eval '(< 1 2 3 4 5 6 7)) #t)
+  (check-equal? (compile-and-eval '(< 2 1)) #f)
+  (check-equal? (compile-and-eval '(<= 2 1)) #f)
+  (check-equal? (compile-and-eval '(<= 2 2)) #t)
   ; (check-equal? (compile-and-eval '(zero? 0)) #t)
   ; (check-equal? (compile-and-eval '(zero? #\c)) #f)
   ; list and pair
-  ; (check-equal? (compile-and-eval 'null) '())
+  (check-equal? (compile-and-eval 'null) '())
   ; (check-equal? (compile-and-eval '(null? null)) #t)
   ; (check-equal? (compile-and-eval '(null? ())) #t)
   ; (check-equal? (compile-and-eval '(cons #\c 1)) (cons #\c 1))
