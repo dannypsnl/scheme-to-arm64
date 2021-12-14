@@ -66,26 +66,6 @@
      (emit "sub x0, x0, #~a" (case op [(string-length) str-tag] [(vector-length) vec-tag]))
      (emit "ldr x0, [x0]")
      (emit "lsl x0, x0, #~a" fixnum-shift)]
-    [(add1 sub1)
-     (compile-expr (car args) stack-index)
-     (case op
-       [(add1) (emit "add x0, x0, #~a" (immediate-rep 1))]
-       [(sub1) (emit "sub x0, x0, #~a" (immediate-rep 1))])]
-    [(+ - * /)
-     (compile-expr (car args) stack-index)
-     (emit "str x0, [sp, #~a]" stack-index)
-     (for ([v (cdr args)])
-       (compile-expr v (- stack-index wordsize))
-       (emit "ldr x1, [sp, #~a]" stack-index)
-       (case op
-         [(+) (emit "add x1, x1, x0")]
-         [(-) (emit "sub x1, x1, x0")]
-         [(*) (emit "lsr x0, x0, #~a" fixnum-shift)
-              (emit "mul x1, x1, x0")]
-         [(/) (emit "lsr x0, x0, #~a" fixnum-shift)
-              (emit "sdiv x1, x1, x0")])
-       (emit "str x1, [sp, #~a]" stack-index))
-     (emit "ldr x0, [sp, #~a]" stack-index)]
     [(or)
      (define-label if-true end)
      (for ([v args])

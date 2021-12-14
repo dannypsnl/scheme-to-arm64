@@ -16,32 +16,46 @@
   (entry Program)
   (terminals (string [comment-string])
              (arm64-reg [reg src dst])
-             (symbol [label])
+             (symbol [label-name])
              (integer [shift imme-value])
              (list [instructions]))
+  (Value [v]
+         reg
+         imme-value)
   (Instruction [inst]
                instructions ; don't directly use this, this is stands for expression that generates several instructions
-               (L label)
+               (label label-name)
                (comment comment-string)
                (str src [dst shift])
                (ldr dst [src shift])
-               (add dst src1 src2)
+               (lsr dst src imme-value)
+               (add dst src v)
+               (sub dst src v)
+               (mul dst src v)
+               (sdiv dst src v)
                (mov dst imme-value)
                (mov dst src)
-               (b label))
+               (b label-name))
   (Program [p]
            (inst* ...)))
 
 (define-pass emit-instruction : (arm64 Instruction) (i) -> * ()
+  [Value : Value (v) -> * ()
+         [,reg reg]
+         [,imme-value (format "#~a" imme-value)]]
   [Instruction : Instruction (i) -> * ()
-               [(L ,label) (emit "~a:" label)]
+               [(label ,label-name) (emit "~a:" label-name)]
                [(comment ,comment-string) (emit "// ~a" comment-string)]
                [(str ,src [,dst ,shift]) (emit "str ~a, [~a, ~a]" src dst shift)]
                [(ldr ,dst [,src ,shift]) (emit "ldr ~a, [~a, ~a]" dst src shift)]
-               [(add ,dst ,src1 ,src2) (emit "add ~a, ~a, ~a" dst src1 src2)]
+               [(lsr ,dst ,src ,imme-value) (emit "lsr ~a, ~a, ~a" dst src imme-value)]
+               [(add ,dst ,src ,v) (emit "add ~a, ~a, ~a" dst src (Value v))]
+               [(sub ,dst ,src ,v) (emit "sub ~a, ~a, ~a" dst src (Value v))]
+               [(mul ,dst ,src ,v) (emit "mul ~a, ~a, ~a" dst src (Value v))]
+               [(sdiv ,dst ,src ,v) (emit "sdiv ~a, ~a, ~a" dst src (Value v))]
                [(mov ,dst ,imme-value) (emit "mov ~a, #~a" dst imme-value)]
                [(mov ,dst ,src) (emit "mov ~a, ~a" dst src)]
-               [(b ,label) (emit "b ~a" label)]
+               [(b ,label-name) (emit "b ~a" label-name)]
                [else (emit "// ignored ~a" i)]])
 (define-pass emit-program : (arm64 Program) (p) -> * ()
   [Program : Program (p) -> * ()

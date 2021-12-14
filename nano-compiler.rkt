@@ -27,16 +27,27 @@
         [(let ([,name* ,e*] ...) ,body)
          `(comment "ignore")]
         [(,e0 ,e1 ...)
-         (match e0
-           ['+  (list (Expr (car e1))
-                      `(str x0 [sp ,stack-index])
-                      (for/list ([v (cdr e1)])
-                        (list (Expr v)
-                              `(ldr x1 [sp ,stack-index])
-                              `(add x1 x1 x0)
-                              `(str x1 [sp ,stack-index])))
-                      `(ldr x0 [sp ,stack-index]))]
-           [else `(comment "ignore")])]))
+         (define op e0)
+         (case op
+           [(add1 sub1) (list (Expr (car e1))
+                              (case op
+                                [(add1) `(add x0 x0 ,(immediate-rep 1))]
+                                [(sub1) `(sub x0 x0 ,(immediate-rep 1))]))]
+           [(+ - * /)  (list (Expr (car e1))
+                             `(str x0 [sp ,stack-index])
+                             (for/list ([v (cdr e1)])
+                               (list (Expr v)
+                                     `(ldr x1 [sp ,stack-index])
+                                     (case op
+                                       [(+) `(add x1 x1 x0)]
+                                       [(-) `(sub x1 x1 x0)]
+                                       [(*) `(lsr x0 x0 ,fixnum-shift)
+                                            `(mul x1 x1 x0)]
+                                       [(/) `(lsr x0 x0 ,fixnum-shift)
+                                            `(sdiv x1 x1 x0)])
+                                     `(str x1 [sp ,stack-index])))
+                             `(ldr x0 [sp ,stack-index]))]
+           [else `(comment "todo function call")])]))
 (define-pass convert : (arm64 Instruction) (i) -> (arm64 Program) ()
   (if (list? i)
       `(,(flatten i) ...)
@@ -54,13 +65,99 @@
   (define cmd "clang -target arm64-apple-darwin-macho /tmp/scheme.s c/runtime.c c/representation.c")
   (system (if debug? (string-append cmd " -g") cmd)))
 
-(define (compile-and-run program [debug? #f])
-  (compile-to-binary program debug?)
-  (if debug?
-      (system "lldb ./a.out")
-      (system "./a.out"))
-  (void))
+(define (compile-and-eval program)
+  (compile-to-binary program)
+  (match-define (list stdout stdin status stderr do)
+    (process "./a.out"))
+  (do 'wait)
+  (read stdout))
 
-(compile-and-run '(begin (define x 1)
-                         (define y 2)
-                         (+ 1 2)))
+(module+ test
+  (require rackunit)
+
+  ; arithmetic
+  (check-equal? (compile-and-eval '1) 1)
+  (check-equal? (compile-and-eval '(add1 1)) 2)
+  (check-equal? (compile-and-eval '(+ 1 1)) 2)
+  (check-equal? (compile-and-eval '(+ 1 2 3)) 6)
+  (check-equal? (compile-and-eval '(- 1 2 3)) -4)
+  ; conditional
+  ; (check-equal? (compile-and-eval '(if #f 1)) #f)
+  ; (check-equal? (compile-and-eval '(if #t 1)) 1)
+  ; (check-equal? (compile-and-eval '(if #t 1 2)) 1)
+  ; (check-equal? (compile-and-eval '(if #f 1 2)) 2)
+  ; (check-equal? (compile-and-eval '(cond
+  ;                                    [(= (- 2 1) 1) 1]
+  ;                                    [#t 2]))
+  ;               1)
+  ; (check-equal? (compile-and-eval '(cond [#t (define x 2)
+  ;                                            x]))
+  ;               2)
+  ; type check
+  ; (check-equal? (compile-and-eval '(char=? #\c #\a)) #f)
+  ; (check-equal? (compile-and-eval '(char=? #\b #\b)) #t)
+  ; (check-equal? (compile-and-eval '(char? #\c)) #t)
+  ; (check-equal? (compile-and-eval '(char? 1)) #f)
+  ; (check-equal? (compile-and-eval '(boolean? #f)) #t)
+  ; (check-equal? (compile-and-eval '(boolean? 1)) #f)
+  ; (check-equal? (compile-and-eval '(integer? 1)) #t)
+  ; (check-equal? (compile-and-eval '(integer? #f)) #f)
+  ; let and define
+  ; (check-equal? (compile-and-eval '(let ([x 1]) x)) 1)
+  ; (check-equal? (compile-and-eval '(let ([x 1])
+  ;                                    (let ([y (* 2 x)])
+  ;                                      (cons x y))))
+  ;               '(1 . 2))
+  ; (check-equal? (compile-and-eval '(let ()
+  ;                                    (define x 1)
+  ;                                    (define y 2)
+  ;                                    (cons x y)))
+  ;               '(1 . 2))
+  ; logical
+  ; (check-equal? (compile-and-eval '(and #t #t)) #t)
+  ; (check-equal? (compile-and-eval '(and #f #t)) #f)
+  ; (check-equal? (compile-and-eval '(and #t #f)) #f)
+  ; (check-equal? (compile-and-eval '(and #t #t #t)) #t)
+  ; (check-equal? (compile-and-eval '(and #t #f #t)) #f)
+  ; (check-equal? (compile-and-eval '(or #t #f)) #t)
+  ; (check-equal? (compile-and-eval '(or #t #f #t)) #t)
+  ; (check-equal? (compile-and-eval '(or #f #t)) #t)
+  ; (check-equal? (compile-and-eval '(or #f #f)) #f)
+  ; comparsion
+  ; (check-equal? (compile-and-eval '(= 1 1)) #t)
+  ; (check-equal? (compile-and-eval '(<= (sub1 10) (* 9 (/ 4 2)))) #t)
+  ; (check-equal? (compile-and-eval '(> 2 1)) #t)
+  ; (check-equal? (compile-and-eval '(>= 2 2)) #t)
+  ; (check-equal? (compile-and-eval '(>= 3 2)) #t)
+  ; (check-equal? (compile-and-eval '(>= 2 3)) #f)
+  ; (check-equal? (compile-and-eval '(< 1 2 3 4 5 6 7)) #t)
+  ; (check-equal? (compile-and-eval '(< 2 1)) #f)
+  ; (check-equal? (compile-and-eval '(<= 2 1)) #f)
+  ; (check-equal? (compile-and-eval '(<= 2 2)) #t)
+  ; (check-equal? (compile-and-eval '(zero? 0)) #t)
+  ; (check-equal? (compile-and-eval '(zero? #\c)) #f)
+  ; list and pair
+  ; (check-equal? (compile-and-eval 'null) '())
+  ; (check-equal? (compile-and-eval '(null? null)) #t)
+  ; (check-equal? (compile-and-eval '(null? ())) #t)
+  ; (check-equal? (compile-and-eval '(cons #\c 1)) (cons #\c 1))
+  ; (check-equal? (compile-and-eval '(cons 1 (cons 2 (cons 3 4)))) '(1 2 3 . 4))
+  ; (check-equal? (compile-and-eval '(car (cons 1 2))) 1)
+  ; (check-equal? (compile-and-eval '(cdr (cons 1 2))) 2)
+  ; (check-equal? (compile-and-eval '(quote 1 2 3)) '(1 2 3))
+  ; (check-equal? (compile-and-eval '(list 1 2 3)) '(1 2 3))
+  ; (check-equal? (compile-and-eval '(list 1 (list 1 2 3) 3)) '(1 (1 2 3) 3))
+  ; string
+  ; (check-equal? (compile-and-eval '(make-string 5 #\c)) "ccccc")
+  ; (check-equal? (compile-and-eval '(string-ref (make-string 2 #\q) 1)) #\q)
+  ; (check-equal? (compile-and-eval '(string? (make-string 2 #\a))) #t)
+  ; (check-equal? (compile-and-eval '(string-length (make-string 2 #\b))) 2)
+  ; vector
+  ; (check-equal? (compile-and-eval '#(1 2 3)) #(1 2 3))
+  ; (check-equal? (compile-and-eval '(vector 1 2 3)) #(1 2 3))
+  ; (check-equal? (compile-and-eval '(vector)) #())
+  ; (check-equal? (compile-and-eval '(make-vector 2 #\c)) #(#\c #\c))
+  ; (check-equal? (compile-and-eval '(vector-ref (make-vector 2 2) 0)) 2)
+  ; (check-equal? (compile-and-eval '(vector? (make-vector 2 2))) #t)
+  ; (check-equal? (compile-and-eval '(vector-length (make-vector 3 #\b))) 3)
+  )
