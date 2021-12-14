@@ -160,8 +160,8 @@
                                              x]))
                 2)
   ; type check
-  ; (check-equal? (compile-and-eval '(char=? #\c #\a)) #f)
-  ; (check-equal? (compile-and-eval '(char=? #\b #\b)) #t)
+  (check-equal? (compile-and-eval '(char=? #\c #\a)) #f)
+  (check-equal? (compile-and-eval '(char=? #\b #\b)) #t)
   ; (check-equal? (compile-and-eval '(char? #\c)) #t)
   ; (check-equal? (compile-and-eval '(char? 1)) #f)
   ; (check-equal? (compile-and-eval '(boolean? #f)) #t)
