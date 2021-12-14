@@ -49,7 +49,7 @@
                (comment comment-string)
                (str src [dst shift])
                (ldr dst [src shift])
-               (add dst src src*)
+               (add dst src1 src2)
                (mov dst imme-value)
                (mov dst src)
                (b label))
