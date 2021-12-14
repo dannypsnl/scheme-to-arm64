@@ -46,6 +46,7 @@
              (list [instructions]))
   (Instruction [inst]
                instructions ; don't directly use this, this is stands for expression that generates several instructions
+               (L label)
                (comment comment-string)
                (str src [dst shift])
                (ldr dst [src shift])
@@ -53,11 +54,8 @@
                (mov dst imme-value)
                (mov dst src)
                (b label))
-  (Block [b]
-         (block label
-                inst* ...))
   (Program [p]
-           (b* ...)))
+           (inst* ...)))
 
 (define-pass compile-scm : (scm/Final Expr) (e si) -> (arm64 Instruction) ()
   (definitions
@@ -91,8 +89,9 @@
            [else `(comment "ignore")])]))
 (define-pass convert : (arm64 Instruction) (i) -> (arm64 Program) ()
   (if (list? i)
-      `((block scheme_entry ,(flatten i) ...))
-      `((block scheme_entry ,i))))
+      `((L scheme_entry)
+        ,(flatten i) ...)
+      `((L scheme_entry) ,i)))
 (define (compile-expr scm-exp stack-index)
   (convert (compile-scm scm-exp stack-index)))
 
