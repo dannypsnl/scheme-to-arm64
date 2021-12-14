@@ -180,14 +180,6 @@
 (module+ test
   (require rackunit)
 
-  ; conditional
-  (check-equal? (compile-and-eval '(cond
-                                     [(= (- 2 1) 1) 1]
-                                     [#t 2]))
-                1)
-  (check-equal? (compile-and-eval '(cond [#t (define x 2)
-                                             x]))
-                2)
   ; type check
   (check-equal? (compile-and-eval '(char=? #\c #\a)) #f)
   (check-equal? (compile-and-eval '(char=? #\b #\b)) #t)
