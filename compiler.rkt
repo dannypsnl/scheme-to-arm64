@@ -141,13 +141,6 @@
 (module+ test
   (require rackunit)
 
-  ; type check
-  (check-equal? (compile-and-eval '(char? #\c)) #t)
-  (check-equal? (compile-and-eval '(char? 1)) #f)
-  (check-equal? (compile-and-eval '(boolean? #f)) #t)
-  (check-equal? (compile-and-eval '(boolean? 1)) #f)
-  (check-equal? (compile-and-eval '(integer? 1)) #t)
-  (check-equal? (compile-and-eval '(integer? #f)) #f)
   ; let and define
   (check-equal? (compile-and-eval '(let ([x 1]) x)) 1)
   (check-equal? (compile-and-eval '(let ([x 1])
@@ -169,16 +162,8 @@
   (check-equal? (compile-and-eval '(or #t #f #t)) #t)
   (check-equal? (compile-and-eval '(or #f #t)) #t)
   (check-equal? (compile-and-eval '(or #f #f)) #f)
-  ; comparsion
-  (check-equal? (compile-and-eval '(zero? 0)) #t)
-  (check-equal? (compile-and-eval '(zero? #\c)) #f)
   ; list and pair
-  (check-equal? (compile-and-eval '(null? null)) #t)
   (check-equal? (compile-and-eval '(null? ())) #t)
-  (check-equal? (compile-and-eval '(cons #\c 1)) (cons #\c 1))
-  (check-equal? (compile-and-eval '(cons 1 (cons 2 (cons 3 4)))) '(1 2 3 . 4))
-  (check-equal? (compile-and-eval '(car (cons 1 2))) 1)
-  (check-equal? (compile-and-eval '(cdr (cons 1 2))) 2)
   (check-equal? (compile-and-eval '(quote 1 2 3)) '(1 2 3))
   (check-equal? (compile-and-eval '(list 1 2 3)) '(1 2 3))
   (check-equal? (compile-and-eval '(list 1 (list 1 2 3) 3)) '(1 (1 2 3) 3))

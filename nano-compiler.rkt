@@ -239,8 +239,8 @@
   (check-equal? (compile-and-eval '(< 2 1)) #f)
   (check-equal? (compile-and-eval '(<= 2 1)) #f)
   (check-equal? (compile-and-eval '(<= 2 2)) #t)
-  ; (check-equal? (compile-and-eval '(zero? 0)) #t)
-  ; (check-equal? (compile-and-eval '(zero? #\c)) #f)
+  (check-equal? (compile-and-eval '(zero? 0)) #t)
+  (check-equal? (compile-and-eval '(zero? #\c)) #f)
   ; list and pair
   (check-equal? (compile-and-eval 'null) '())
   (check-equal? (compile-and-eval '(null? null)) #t)
