@@ -33,11 +33,15 @@
                (sub dst src v)
                (mul dst src v)
                (sdiv dst src v)
-               (mov dst imme-value)
-               (mov dst src)
+               (mov dst v)
                (cmp reg v)
                (b label-name)
                (b.eq label-name)
+               (b.ne label-name)
+               (b.lt label-name)
+               (b.le label-name)
+               (b.gt label-name)
+               (b.ge label-name)
                )
   (Program [p]
            (inst* ...)))
@@ -56,11 +60,15 @@
                [(sub ,dst ,src ,v) (emit "sub ~a, ~a, ~a" dst src (Value v))]
                [(mul ,dst ,src ,v) (emit "mul ~a, ~a, ~a" dst src (Value v))]
                [(sdiv ,dst ,src ,v) (emit "sdiv ~a, ~a, ~a" dst src (Value v))]
-               [(mov ,dst ,imme-value) (emit "mov ~a, #~a" dst imme-value)]
-               [(mov ,dst ,src) (emit "mov ~a, ~a" dst src)]
+               [(mov ,dst ,v) (emit "mov ~a, ~a" dst (Value v))]
                [(cmp ,reg ,v) (emit "cmp ~a, ~a" reg (Value v))]
                [(b ,label-name) (emit "b ~a" label-name)]
                [(b.eq ,label-name) (emit "b.eq ~a" label-name)]
+               [(b.ne ,label-name) (emit "b.ne ~a" label-name)]
+               [(b.lt ,label-name) (emit "b.lt ~a" label-name)]
+               [(b.le ,label-name) (emit "b.le ~a" label-name)]
+               [(b.gt ,label-name) (emit "b.gt ~a" label-name)]
+               [(b.ge ,label-name) (emit "b.ge ~a" label-name)]
                [else (emit "// ignored ~a" i)]
                ])
 (define-pass emit-program : (arm64 Program) (p) -> * ()

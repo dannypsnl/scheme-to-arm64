@@ -87,31 +87,6 @@
      (label if-true
             (emit "mov x0, #~a" (immediate-rep #f)))
      (label end)]
-    [(= < > <= >= char=?)
-     (define-label end)
-     (for ([left args]
-           [right (cdr args)])
-       (compile-expr left stack-index)
-       (when (eq? op 'char=?)
-         (emit "lsr x0, x0, #~a" char-shift))
-       (emit "mov x8, x0")
-       (compile-expr right (- stack-index wordsize))
-       (when (eq? op 'char=?)
-         (emit "lsr x0, x0, #~a" char-shift))
-       (emit "cmp x8, x0")
-       (define-label if-true)
-       (case op
-         [(=) (b.eq if-true)]
-         [(<) (b.lt if-true)]
-         [(>) (b.gt if-true)]
-         [(<=) (b.le if-true)]
-         [(>=) (b.ge if-true)]
-         [(char=?) (b.eq if-true)])
-       (emit "mov x0, #~a" (immediate-rep #f))
-       (b end)
-       (label if-true))
-     (emit "mov x0, #~a" (immediate-rep #t))
-     (label end)]
     [(integer? boolean? char? string? vector? zero?)
      (compile-expr (car args) stack-index)
      (case op
@@ -149,24 +124,6 @@
        (emit "str x0, [x28, #~a]" (* wordsize i)))
      (emit "add x28, x28, #~a" (* wordsize (length vs)))
      (emit "mov x0, x1")]
-    [`(cond (,tests ,bodys ...) ...)
-     (define-label end)
-     (for ([test tests]
-           [exprs bodys])
-       (define-label body-tag next)
-       (compile-expr test stack-index)
-       (emit-is-x0-equal-to (immediate-rep #t))
-       (b.ne next)
-       (label body-tag
-              (parameterize ([env (make-env (make-hash))])
-                (define local-stack-index stack-index)
-                (for ([expr exprs])
-                  (define new-index (compile-expr expr local-stack-index))
-                  (when (number? new-index)
-                    (set! local-stack-index new-index)))
-                (b end)))
-       (label next))
-     (label end)]
     [`(define ,name ,expr)
      (compile-expr expr stack-index)
      (emit "str x0, [sp, #~a]" stack-index)
@@ -224,10 +181,6 @@
   (require rackunit)
 
   ; conditional
-  (check-equal? (compile-and-eval '(if #f 1)) #f)
-  (check-equal? (compile-and-eval '(if #t 1)) 1)
-  (check-equal? (compile-and-eval '(if #t 1 2)) 1)
-  (check-equal? (compile-and-eval '(if #f 1 2)) 2)
   (check-equal? (compile-and-eval '(cond
                                      [(= (- 2 1) 1) 1]
                                      [#t 2]))

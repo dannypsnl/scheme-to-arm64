@@ -41,6 +41,21 @@
              (Expr e)))]
         [(let ([,name* ,e*] ...) ,body)
          `(comment "ignore")]
+        [(cond [,e ,body] ...)
+         (define-label end)
+         (append
+          (for/list ([e e]
+                     [body body])
+            (define-label body-tag next)
+            (list
+             (Expr e)
+             (emit-is-x0-equal-to (immediate-rep #t))
+             `(b.ne ,next)
+             `(label ,body-tag)
+             (Expr body)
+             `(b ,end)
+             `(label ,next)))
+          (list `(label ,end)))]
         [(if ,e0 ,e1 ,e2)
          (define-label if-true end)
          (list (Expr e0)
@@ -72,6 +87,31 @@
                                             `(sdiv x1 x1 x0)])
                                      `(str x1 [sp ,stack-index])))
                              `(ldr x0 [sp ,stack-index]))]
+           [(= < > <= >= char=?)
+            (define-label end)
+            (append
+             (for/list ([left e1]
+                        [right (cdr e1)])
+               (define-label if-true)
+               (list
+                (Expr left)
+                (if (eq? op 'char=?) `(lsr x0 x0 ,char-shift) '())
+                `(mov x8 x0)
+                (Expr right)
+                (if (eq? op 'char=?) `(lsr x0 x0 ,char-shift) '())
+                `(cmp x8 x0)
+                (case op
+                  [(=) `(b.eq ,if-true)]
+                  [(<) `(b.lt ,if-true)]
+                  [(>) `(b.gt ,if-true)]
+                  [(<=) `(b.le ,if-true)]
+                  [(>=) `(b.ge ,if-true)]
+                  [(char=?) `(b.eq ,if-true)])
+                `(mov x0 ,(immediate-rep #f))
+                `(b ,end)
+                `(label ,if-true)))
+             (list `(mov x0 ,(immediate-rep #t))
+                   `(label ,end)))]
            [else `(comment "todo function call")])])
   (Expr e))
 (define-pass convert : (arm64 Instruction) (i) -> (arm64 Program) ()
@@ -112,13 +152,13 @@
   (check-equal? (compile-and-eval '(if #t 1)) 1)
   (check-equal? (compile-and-eval '(if #t 1 2)) 1)
   (check-equal? (compile-and-eval '(if #f 1 2)) 2)
-  ; (check-equal? (compile-and-eval '(cond
-  ;                                    [(= (- 2 1) 1) 1]
-  ;                                    [#t 2]))
-  ;               1)
-  ; (check-equal? (compile-and-eval '(cond [#t (define x 2)
-  ;                                            x]))
-  ;               2)
+  (check-equal? (compile-and-eval '(cond
+                                     [(= (- 2 1) 1) 1]
+                                     [#t 2]))
+                1)
+  (check-equal? (compile-and-eval '(cond [#t (define x 2)
+                                             x]))
+                2)
   ; type check
   ; (check-equal? (compile-and-eval '(char=? #\c #\a)) #f)
   ; (check-equal? (compile-and-eval '(char=? #\b #\b)) #t)
