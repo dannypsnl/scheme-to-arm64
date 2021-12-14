@@ -22,17 +22,6 @@
   (label end))
 (define (compile-primitive-call op args stack-index)
   (case op
-    [(cons)
-     ; store car/cdr to heap
-     (compile-expr (car args) stack-index)
-     (emit "str x0, [sp, #~a]" stack-index)
-     (compile-expr (cadr args) (- stack-index wordsize))
-     (emit "ldr x1, [sp, #~a]" stack-index)
-     (emit "stp x1, x0, [x28]")
-     ; save pointer and tag it
-     (emit "orr x0, x28, #~a" pair-tag)
-     ; we used two wordsize from heap
-     (emit "add x28, x28, #~a" (* 2 wordsize))]
     [(make-string make-vector)
      (compile-expr (car args) stack-index)
      (emit "lsr x0, x0, #~a" fixnum-shift)
@@ -87,26 +76,7 @@
      (label if-true
             (emit "mov x0, #~a" (immediate-rep #f)))
      (label end)]
-    [(integer? boolean? char? string? vector? zero?)
-     (compile-expr (car args) stack-index)
-     (case op
-       [(integer?) (emit "and x0, x0, #~a" fixnum-mask)
-                   (emit-is-x0-equal-to 0)]
-       [(boolean?) (emit "and x0, x0, #~a" bool-mask)
-                   (emit-is-x0-equal-to bool-tag)]
-       [(char?) (emit "and x0, x0, #~a" char-mask)
-                (emit-is-x0-equal-to char-tag)]
-       [(string?) (emit "and x0, x0, #~a" ptr-mask)
-                  (emit-is-x0-equal-to str-tag)]
-       [(vector?) (emit "and x0, x0, #~a" ptr-mask)
-                  (emit-is-x0-equal-to vec-tag)]
-       [(zero?) (emit-is-x0-equal-to 0)])]
-    [(null? car cdr)
-     (compile-expr (car args) stack-index)
-     (case op
-       [(car) (emit "ldr x0, [x0, #~a]" (- pair-tag))]
-       [(cdr) (emit "ldr x0, [x0, #~a]" (- wordsize pair-tag))]
-       [(null?) (emit-is-x0-equal-to pair-tag)])]))
+    ))
 
 (define (compile-expr e stack-index)
   (match e

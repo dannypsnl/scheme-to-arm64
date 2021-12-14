@@ -71,6 +71,20 @@
         [(,e0 ,e1 ...)
          (define op e0)
          (case op
+           [(cons) (set! stack-index (- stack-index wordsize))
+                   (define e (Expr (cadr e1)))
+                   (set! stack-index (+ stack-index wordsize))
+                   (list
+                    ; store car/cdr to heap
+                    (Expr (car e1))
+                    `(str x0 [sp ,stack-index])
+                    e
+                    `(ldr x1 [sp ,stack-index])
+                    `(stp x1 x0 [x28])
+                    ; save pointer and tag it
+                    `(orr x0 x28 ,pair-tag)
+                    ; we used two wordsize from heap
+                    `(add x28 x28 ,(* 2 wordsize)))]
            [(add1 sub1) (list (Expr (car e1))
                               (case op
                                 [(add1) `(add x0 x0 ,(immediate-rep 1))]
@@ -118,6 +132,24 @@
                 `(label ,if-true)))
              (list `(mov x0 ,(immediate-rep #t))
                    `(label ,end)))]
+           [(integer? boolean? char? string? vector? zero? null? car cdr)
+            (list
+             (Expr (car e1))
+             (case op
+               [(integer?) (list `(and x0 x0 ,fixnum-mask)
+                                 (emit-is-x0-equal-to 0))]
+               [(boolean?) (list `(and x0 x0 ,bool-mask)
+                                 (emit-is-x0-equal-to bool-tag))]
+               [(char?) (list `(and x0 x0 ,char-mask)
+                              (emit-is-x0-equal-to char-tag))]
+               [(string?) (list `(and x0 x0 ,ptr-mask)
+                                (emit-is-x0-equal-to str-tag))]
+               [(vector?) (list `(and x0 x0 ,ptr-mask)
+                                (emit-is-x0-equal-to vec-tag))]
+               [(zero?) (emit-is-x0-equal-to 0)]
+               [(car) `(ldr x0 [x0 ,(- pair-tag)])]
+               [(cdr) `(ldr x0 [x0 ,(- wordsize pair-tag)])]
+               [(null?) (emit-is-x0-equal-to pair-tag)]))]
            [(void) `(mov x0 ,(immediate-rep (void)))]
            [else `(comment "todo function call")])])
   (Expr e))
@@ -169,12 +201,12 @@
   ; type check
   (check-equal? (compile-and-eval '(char=? #\c #\a)) #f)
   (check-equal? (compile-and-eval '(char=? #\b #\b)) #t)
-  ; (check-equal? (compile-and-eval '(char? #\c)) #t)
-  ; (check-equal? (compile-and-eval '(char? 1)) #f)
-  ; (check-equal? (compile-and-eval '(boolean? #f)) #t)
-  ; (check-equal? (compile-and-eval '(boolean? 1)) #f)
-  ; (check-equal? (compile-and-eval '(integer? 1)) #t)
-  ; (check-equal? (compile-and-eval '(integer? #f)) #f)
+  (check-equal? (compile-and-eval '(char? #\c)) #t)
+  (check-equal? (compile-and-eval '(char? 1)) #f)
+  (check-equal? (compile-and-eval '(boolean? #f)) #t)
+  (check-equal? (compile-and-eval '(boolean? 1)) #f)
+  (check-equal? (compile-and-eval '(integer? 1)) #t)
+  (check-equal? (compile-and-eval '(integer? #f)) #f)
   ; let and define
   ; (check-equal? (compile-and-eval '(let ([x 1]) x)) 1)
   ; (check-equal? (compile-and-eval '(let ([x 1])
@@ -211,12 +243,12 @@
   ; (check-equal? (compile-and-eval '(zero? #\c)) #f)
   ; list and pair
   (check-equal? (compile-and-eval 'null) '())
-  ; (check-equal? (compile-and-eval '(null? null)) #t)
+  (check-equal? (compile-and-eval '(null? null)) #t)
   ; (check-equal? (compile-and-eval '(null? ())) #t)
-  ; (check-equal? (compile-and-eval '(cons #\c 1)) (cons #\c 1))
-  ; (check-equal? (compile-and-eval '(cons 1 (cons 2 (cons 3 4)))) '(1 2 3 . 4))
-  ; (check-equal? (compile-and-eval '(car (cons 1 2))) 1)
-  ; (check-equal? (compile-and-eval '(cdr (cons 1 2))) 2)
+  (check-equal? (compile-and-eval '(cons #\c 1)) (cons #\c 1))
+  (check-equal? (compile-and-eval '(cons 1 (cons 2 (cons 3 4)))) '(1 2 3 . 4))
+  (check-equal? (compile-and-eval '(car (cons 1 2))) 1)
+  (check-equal? (compile-and-eval '(cdr (cons 1 2))) 2)
   ; (check-equal? (compile-and-eval '(quote 1 2 3)) '(1 2 3))
   ; (check-equal? (compile-and-eval '(list 1 2 3)) '(1 2 3))
   ; (check-equal? (compile-and-eval '(list 1 (list 1 2 3) 3)) '(1 (1 2 3) 3))

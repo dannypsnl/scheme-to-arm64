@@ -26,6 +26,7 @@
                instructions ; don't directly use this, this is stands for expression that generates several instructions
                (label label-name)
                (comment comment-string)
+               (stp src1 src2 [dst])
                (str src [dst shift])
                (ldr dst [src shift])
                (lsr dst src imme-value)
@@ -33,6 +34,8 @@
                (sub dst src v)
                (mul dst src v)
                (sdiv dst src v)
+               (and dst src v)
+               (orr dst src v)
                (mov dst v)
                (cmp reg v)
                (b label-name)
@@ -53,6 +56,7 @@
   [Instruction : Instruction (i) -> * ()
                [(label ,label-name) (emit "~a:" label-name)]
                [(comment ,comment-string) (emit "// ~a" comment-string)]
+               [(stp ,src1 ,src2 [,dst]) (emit "stp ~a, ~a, [~a]" src1 src2 dst)]
                [(str ,src [,dst ,shift]) (emit "str ~a, [~a, ~a]" src dst shift)]
                [(ldr ,dst [,src ,shift]) (emit "ldr ~a, [~a, ~a]" dst src shift)]
                [(lsr ,dst ,src ,imme-value) (emit "lsr ~a, ~a, ~a" dst src imme-value)]
@@ -60,6 +64,8 @@
                [(sub ,dst ,src ,v) (emit "sub ~a, ~a, ~a" dst src (Value v))]
                [(mul ,dst ,src ,v) (emit "mul ~a, ~a, ~a" dst src (Value v))]
                [(sdiv ,dst ,src ,v) (emit "sdiv ~a, ~a, ~a" dst src (Value v))]
+               [(and ,dst ,src ,v) (emit "and ~a, ~a, ~a" dst src (Value v))]
+               [(orr ,dst ,src ,v) (emit "orr ~a, ~a, ~a" dst src (Value v))]
                [(mov ,dst ,v) (emit "mov ~a, ~a" dst (Value v))]
                [(cmp ,reg ,v) (emit "cmp ~a, ~a" reg (Value v))]
                [(b ,label-name) (emit "b ~a" label-name)]
