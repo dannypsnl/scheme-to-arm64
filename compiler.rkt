@@ -172,8 +172,6 @@
   (require rackunit)
 
   ; type check
-  (check-equal? (compile-and-eval '(char=? #\c #\a)) #f)
-  (check-equal? (compile-and-eval '(char=? #\b #\b)) #t)
   (check-equal? (compile-and-eval '(char? #\c)) #t)
   (check-equal? (compile-and-eval '(char? 1)) #f)
   (check-equal? (compile-and-eval '(boolean? #f)) #t)
@@ -202,20 +200,9 @@
   (check-equal? (compile-and-eval '(or #f #t)) #t)
   (check-equal? (compile-and-eval '(or #f #f)) #f)
   ; comparsion
-  (check-equal? (compile-and-eval '(= 1 1)) #t)
-  (check-equal? (compile-and-eval '(<= (sub1 10) (* 9 (/ 4 2)))) #t)
-  (check-equal? (compile-and-eval '(> 2 1)) #t)
-  (check-equal? (compile-and-eval '(>= 2 2)) #t)
-  (check-equal? (compile-and-eval '(>= 3 2)) #t)
-  (check-equal? (compile-and-eval '(>= 2 3)) #f)
-  (check-equal? (compile-and-eval '(< 1 2 3 4 5 6 7)) #t)
-  (check-equal? (compile-and-eval '(< 2 1)) #f)
-  (check-equal? (compile-and-eval '(<= 2 1)) #f)
-  (check-equal? (compile-and-eval '(<= 2 2)) #t)
   (check-equal? (compile-and-eval '(zero? 0)) #t)
   (check-equal? (compile-and-eval '(zero? #\c)) #f)
   ; list and pair
-  (check-equal? (compile-and-eval 'null) '())
   (check-equal? (compile-and-eval '(null? null)) #t)
   (check-equal? (compile-and-eval '(null? ())) #t)
   (check-equal? (compile-and-eval '(cons #\c 1)) (cons #\c 1))
