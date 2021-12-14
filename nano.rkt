@@ -88,16 +88,11 @@
                               `(add x1 x1 x0)
                               `(str x1 [sp ,stack-index])))
                       `(ldr x0 [sp ,stack-index]))]
-           [else `(comment "ignore")])])
-  )
+           [else `(comment "ignore")])]))
 (define-pass convert : (arm64 Instruction) (i) -> (arm64 Program) ()
-  (flat : Instruction (i) -> * ()
-        [,instructions i]
-        [else i])
-  (let ([insts (flat i)])
-    (if (list? insts)
-        `((block scheme_entry ,(flatten insts) ...))
-        `((block scheme_entry ,i)))))
+  (if (list? i)
+      `((block scheme_entry ,(flatten i) ...))
+      `((block scheme_entry ,i))))
 (define (compile-expr scm-exp stack-index)
   (convert (compile-scm scm-exp stack-index)))
 
