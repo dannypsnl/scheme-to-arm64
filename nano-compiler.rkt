@@ -151,6 +151,24 @@
                [(cdr) `(ldr x0 [x0 ,(- wordsize pair-tag)])]
                [(null?) (emit-is-x0-equal-to pair-tag)]))]
            [(void) `(mov x0 ,(immediate-rep (void)))]
+           [(and or)
+            (define-label if-true end)
+            (list
+             (for/list ([v e1])
+               (list (Expr v)
+                     (case op
+                       [(and) (emit-is-x0-equal-to (immediate-rep #f))]
+                       [(or) (emit-is-x0-equal-to (immediate-rep #t))])
+                     `(b.eq ,if-true)))
+             (case op
+               [(and) `(mov x0 ,(immediate-rep #t))]
+               [(or) `(mov x0 ,(immediate-rep #f))])
+             `(b ,end)
+             `(label ,if-true)
+             (case op
+               [(and) `(mov x0 ,(immediate-rep #f))]
+               [(or) `(mov x0 ,(immediate-rep #t))])
+             `(label ,end))]
            [else `(comment "todo function call")])])
   (Expr e))
 (define-pass convert : (arm64 Instruction) (i) -> (arm64 Program) ()
@@ -219,15 +237,15 @@
   ;                                    (cons x y)))
   ;               '(1 . 2))
   ; logical
-  ; (check-equal? (compile-and-eval '(and #t #t)) #t)
-  ; (check-equal? (compile-and-eval '(and #f #t)) #f)
-  ; (check-equal? (compile-and-eval '(and #t #f)) #f)
-  ; (check-equal? (compile-and-eval '(and #t #t #t)) #t)
-  ; (check-equal? (compile-and-eval '(and #t #f #t)) #f)
-  ; (check-equal? (compile-and-eval '(or #t #f)) #t)
-  ; (check-equal? (compile-and-eval '(or #t #f #t)) #t)
-  ; (check-equal? (compile-and-eval '(or #f #t)) #t)
-  ; (check-equal? (compile-and-eval '(or #f #f)) #f)
+  (check-equal? (compile-and-eval '(and #t #t)) #t)
+  (check-equal? (compile-and-eval '(and #f #t)) #f)
+  (check-equal? (compile-and-eval '(and #t #f)) #f)
+  (check-equal? (compile-and-eval '(and #t #t #t)) #t)
+  (check-equal? (compile-and-eval '(and #t #f #t)) #f)
+  (check-equal? (compile-and-eval '(or #t #f)) #t)
+  (check-equal? (compile-and-eval '(or #t #f #t)) #t)
+  (check-equal? (compile-and-eval '(or #f #t)) #t)
+  (check-equal? (compile-and-eval '(or #f #f)) #f)
   ; comparsion
   (check-equal? (compile-and-eval '(= 1 1)) #t)
   (check-equal? (compile-and-eval '(<= (sub1 10) (* 9 (/ 4 2)))) #t)

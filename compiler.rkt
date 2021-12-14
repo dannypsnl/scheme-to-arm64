@@ -54,28 +54,6 @@
      (emit "sub x0, x0, #~a" (case op [(string-length) str-tag] [(vector-length) vec-tag]))
      (emit "ldr x0, [x0]")
      (emit "lsl x0, x0, #~a" fixnum-shift)]
-    [(or)
-     (define-label if-true end)
-     (for ([v args])
-       (compile-expr v stack-index)
-       (emit-is-x0-equal-to (immediate-rep #t))
-       (b.eq if-true))
-     (emit "mov x0, #~a" (immediate-rep #f))
-     (b end)
-     (label if-true
-            (emit "mov x0, #~a" (immediate-rep #t)))
-     (label end)]
-    [(and)
-     (define-label if-true end)
-     (for ([v args])
-       (compile-expr v stack-index)
-       (emit-is-x0-equal-to (immediate-rep #f))
-       (b.eq if-true))
-     (emit "mov x0, #~a" (immediate-rep #t))
-     (b end)
-     (label if-true
-            (emit "mov x0, #~a" (immediate-rep #f)))
-     (label end)]
     ))
 
 (define (compile-expr e stack-index)
@@ -152,16 +130,6 @@
                                      (define y 2)
                                      (cons x y)))
                 '(1 . 2))
-  ; logical
-  (check-equal? (compile-and-eval '(and #t #t)) #t)
-  (check-equal? (compile-and-eval '(and #f #t)) #f)
-  (check-equal? (compile-and-eval '(and #t #f)) #f)
-  (check-equal? (compile-and-eval '(and #t #t #t)) #t)
-  (check-equal? (compile-and-eval '(and #t #f #t)) #f)
-  (check-equal? (compile-and-eval '(or #t #f)) #t)
-  (check-equal? (compile-and-eval '(or #t #f #t)) #t)
-  (check-equal? (compile-and-eval '(or #f #t)) #t)
-  (check-equal? (compile-and-eval '(or #f #f)) #f)
   ; list and pair
   (check-equal? (compile-and-eval '(null? ())) #t)
   (check-equal? (compile-and-eval '(quote 1 2 3)) '(1 2 3))
