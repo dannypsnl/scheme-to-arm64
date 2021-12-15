@@ -3,8 +3,6 @@
 (provide arm64
          emit-program)
 
-(require "../emit.rkt")
-
 (define ops '(lsr lsl))
 (define (op? x) (member x ops))
 (define arm64-regs '(sp
@@ -54,6 +52,10 @@
                )
   (Program [p]
            (inst* ...)))
+
+(define (emit . args)
+  (apply printf args)
+  (newline))
 
 (define-pass emit-instruction : (arm64 Instruction) (i) -> * ()
   [Value : Value (v) -> * ()
