@@ -89,20 +89,22 @@
                    (define e (Expr e-cdr))
                    (set! stack-index (+ stack-index wordsize))
                    (list
-                    (Expr e-car)
-                    `(str x0 [sp ,stack-index])
-                    e
-                    `(ldr x1 [sp ,stack-index])
-                    `(mov x2 x0)
                     ; going to malloc 2 words
                     `(mov x0 ,(* 2 wordsize))
                     `(stp x29 x30 [sp 8])
                     `(bl _GC_malloc)
                     `(ldp x29 x30 [sp 8])
+                    `(mov x2 x0)
+                    ; compile car
+                    (Expr e-car)
+                    `(str x0 [sp ,stack-index])
+                    ; compile cdr
+                    e
+                    `(ldr x1 [sp ,stack-index])
                     ; store car/cdr to heap
-                    `(stp x1 x2 [x0 0])
+                    `(stp x1 x0 [x2 0])
                     ; save pointer and tag it
-                    `(orr x0 x0 ,pair-tag))]
+                    `(orr x0 x2 ,pair-tag))]
            [(add1 sub1) (list (Expr (car e1))
                               (case op
                                 [(add1) `(add x0 x0 ,(immediate-rep 1))]
