@@ -28,7 +28,8 @@
                instructions ; don't directly use this, this is stands for expression that generates several instructions
                (label label-name)
                (comment comment-string)
-               (stp src1 src2 [dst])
+               (stp src1 src2 [dst shift])
+               (ldp src1 src2 [dst shift])
                (str src [dst shift])
                (ldr dst [src shift])
                (lsr dst src imme-value)
@@ -64,7 +65,8 @@
   [Instruction : Instruction (i) -> * ()
                [(label ,label-name) (emit "~a:" label-name)]
                [(comment ,comment-string) (emit "// ~a" comment-string)]
-               [(stp ,src1 ,src2 [,dst]) (emit "stp ~a, ~a, [~a]" src1 src2 dst)]
+               [(stp ,src1 ,src2 [,dst ,shift]) (emit "stp ~a, ~a, [~a, ~a]" src1 src2 dst shift)]
+               [(ldp ,dst1 ,dst2 [,src ,shift]) (emit "ldp ~a, ~a, [~a, ~a]" dst1 dst2 src shift)]
                [(str ,src [,dst ,shift]) (emit "str ~a, [~a, ~a]" src dst shift)]
                [(ldr ,dst [,src ,shift]) (emit "ldr ~a, [~a, ~a]" dst src shift)]
                [(lsr ,dst ,src ,imme-value) (emit "lsr ~a, ~a, ~a" dst src imme-value)]
