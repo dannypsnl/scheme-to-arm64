@@ -6,6 +6,16 @@ A scheme to Arm64 compiler that keep simple for teaching purpose.
 racket main.rkt -e '(char=? #\c #\c)'
 ```
 
+### Installation
+
+```shell
+git submodule update --init
+cd bdwgc
+./autogen.sh
+./configure
+make -j 8
+```
+
 ### Develop
 
 You're assume to familiar with arm64's assembly to contribute. A good start is:
