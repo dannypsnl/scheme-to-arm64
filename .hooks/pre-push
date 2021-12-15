@@ -30,4 +30,7 @@ do
 	fi
 done
 
-raco test .
+if test $(git branch --show-current) = "develop"
+then
+    raco test .
+fi
