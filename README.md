@@ -14,6 +14,7 @@ cd bdwgc
 ./autogen.sh
 ./configure
 make -j 8
+make install
 ```
 
 ### Develop
