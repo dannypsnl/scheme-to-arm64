@@ -79,8 +79,7 @@
                `(label ,if-true)
                (Expr e1)
                `(label ,end))]
-        [(,e0 ,e1 ...)
-         (define op e0)
+        [(prim ,op ,e1 ...)
          (case op
            [(cons) (set! stack-index (- stack-index wordsize))
                    (define e (Expr (cadr e1)))
@@ -222,8 +221,9 @@
             (list (Expr (car e1))
                   `(sub x0 x0 ,(case op [(string-length) str-tag] [(vector-length) vec-tag]))
                   `(ldr x0 [x0 0])
-                  `(lsl x0 x0 ,fixnum-shift))]
-           [else `(comment "todo function call")])])
+                  `(lsl x0 x0 ,fixnum-shift))])]
+        [(,e0 ,e1 ...)
+         `(comment "todo function call")])
   (Expr e))
 (define-pass convert : (arm64 Instruction) (i) -> (arm64 Program) ()
   (if (list? i)
@@ -260,7 +260,7 @@
   (check-equal? (compile-and-eval '(+ 1 2 3)) 6)
   (check-equal? (compile-and-eval '(- 1 2 3)) -4)
   ; conditional
-  (check-equal? (compile-and-eval '(if #f 1)) eof) ; since we will get a #<void> which prints nothing
+  ; (check-equal? (compile-and-eval '(if #f 1)) eof) ; since we will get a #<void> which prints nothing
   (check-equal? (compile-and-eval '(if #t 1)) 1)
   (check-equal? (compile-and-eval '(if #t 1 2)) 1)
   (check-equal? (compile-and-eval '(if #f 1 2)) 2)

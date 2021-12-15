@@ -53,8 +53,44 @@
            [(equal? e0 'vector) `,(apply vector e1)]
            [else `(,e0 ,e1 ...)])]])
 
-(define-language scm/Final (extends scm/L3))
-(define-pass final : (scm/L3 Expr) (e) -> (scm/Final Expr) ()
+(define primitive-functions
+  '(+
+    -
+    *
+    /
+    add1 sub1
+    zero?
+    ; list and pair
+    car cdr cons
+    null?
+    ; logical
+    and or
+    ; comparison operators
+    = < > <= >= char=?
+    ; type check
+    integer?
+    boolean?
+    char?
+    ; string
+    make-string string-ref string? string-length
+    ; vector
+    make-vector vector-ref vector? vector-length))
+(define (primitive? x) (member x primitive-functions))
+(define-language scm/L4
+  (extends scm/L3)
+  (terminals (+ (primitive [op])))
+  (Expr [e body]
+        (+ (prim op e1 ...))))
+(define-pass explicit-prim-call : (scm/L3 Expr) (e) -> (scm/L4 Expr) ()
+  [Expr : Expr (e) -> Expr ()
+        [(,[e0] ,[e1] ...)
+         (cond
+           [(member e0 primitive-functions)
+            `(prim ,e0 ,e1 ...)]
+           [else `(,e0 ,e1 ...)])]])
+
+(define-language scm/Final (extends scm/L4))
+(define-pass final : (scm/L4 Expr) (e) -> (scm/Final Expr) ()
   [Expr : Expr (e) -> Expr ()])
 
 (define-parser parse-scm scm)
@@ -65,4 +101,5 @@
          (list wrap-begin
                remove-if
                normalize-data
+               explicit-prim-call
                final)))
