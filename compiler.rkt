@@ -34,15 +34,16 @@
                  [else `(ldr x0 [sp ,(lookup name)])])]
         [,c `(mov x0 ,(immediate-rep c))]
         [,v (match-define (vector vs ...) v)
-            (list `(mov x0 ,(length vs))
-                  `(str x0 [x28 0])
-                  `(orr x1 x28 ,vec-tag)
-                  `(add x28 x28 ,wordsize)
+            (list `(mov x0 ,(* (length vs) wordsize))
+                  `(bl _scm_malloc)
+                  `(mov x27 x0)
+                  `(mov x0 ,(length vs))
+                  `(str x0 [x27 0])
+                  `(orr x1 x27 ,vec-tag)
                   (for/list ([v vs]
                              [i (range (length vs))])
                     (list (Expr v)
-                          `(str x0 [x28 ,(* wordsize i)])))
-                  `(add x28 x28 ,(* wordsize (length vs)))
+                          `(str x0 [x27 ,(* wordsize i)])))
                   `(mov x0 x1))]
         [(define ,name ,e)
          (define var-offset stack-index)
@@ -90,11 +91,14 @@
                     `(str x0 [sp ,stack-index])
                     e
                     `(ldr x1 [sp ,stack-index])
-                    `(stp x1 x0 [x28])
+                    `(mov x2 x0)
+                    ; going to malloc 2 words
+                    `(mov x0 ,(* 2 wordsize))
+                    `(bl _scm_malloc)
+                    `(mov x27 x0)
+                    `(stp x1 x2 [x27])
                     ; save pointer and tag it
-                    `(orr x0 x28 ,pair-tag)
-                    ; we used two wordsize from heap
-                    `(add x28 x28 ,(* 2 wordsize)))]
+                    `(orr x0 x0 ,pair-tag))]
            [(add1 sub1) (list (Expr (car e1))
                               (case op
                                 [(add1) `(add x0 x0 ,(immediate-rep 1))]
@@ -181,25 +185,24 @@
              `(label ,end))]
            [(make-string make-vector)
             (list
+             `(mov x0 ,(* (length e1) wordsize))
+             `(bl _scm_malloc)
+             `(mov x27 x0)
              (Expr (car e1))
              `(lsr x0 x0 ,fixnum-shift)
              ; store length into new structure
-             `(str x0 [x28 0])
+             `(str x0 [x27 0])
              ; save pointer and tag it
-             `(orr x1 x28 ,(case op [(make-string) str-tag] [(make-vector) vec-tag]))
-             `(add x28 x28 ,8)
+             `(orr x1 x27 ,(case op [(make-string) str-tag] [(make-vector) vec-tag]))
              (when (> (length e1) 1)
                (set! stack-index (- stack-index wordsize))
                (define e (Expr (cadr e1)))
                (set! stack-index (+ stack-index wordsize))
                (list
                 e
-                (case op
-                  [(make-string) `(lsr w0 w0 ,char-shift)]
-                  [else '()])
+                (if (equal? op 'make-string) `(lsr w0 w0 ,char-shift) '())
                 (for/list ([i (range (car e1))])
-                  `(str x0 [x28 ,(* (case op [(make-string) 1] [(make-vector) wordsize]) i)]))
-                `(add x28 x28 ,(* (case op [(make-string) 1] [(make-vector) wordsize]) (car e1)))))
+                  `(str x0 [x27 ,(* (case op [(make-string) 1] [(make-vector) wordsize]) i)]))))
              `(mov x0 x1))]
            [(string-ref vector-ref)
             (set! stack-index (- stack-index wordsize))
@@ -239,7 +242,7 @@
   (with-output-to-file "/tmp/scheme.s"
     #:exists 'replace
     (lambda () (compile-program program)))
-  (define cmd "clang -target arm64-apple-darwin-macho /tmp/scheme.s c/runtime.c c/representation.c")
+  (define cmd "clang -target arm64-apple-darwin-macho -lgc /tmp/scheme.s c/runtime.c c/representation.c")
   (system (if debug? (string-append cmd " -g") cmd)))
 
 (define (compile-and-eval program)

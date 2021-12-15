@@ -6,7 +6,7 @@
 (define ops '(lsr lsl))
 (define (op? x) (member x ops))
 (define arm64-regs '(sp
-                     w0
+                     w0 ; we use this to let converted result fit into char
                      x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10
                      x11 x12 x13 x14 x15 x16 x17 x18 x19 x20
                      x21 x22 x23 x24 x25 x26 x27 x28 x29 x30))
@@ -43,6 +43,7 @@
                (mov dst v)
                (cmp reg v)
                (b label-name)
+               (bl label-name)
                (b.eq label-name)
                (b.ne label-name)
                (b.lt label-name)
@@ -78,6 +79,7 @@
                [(mov ,dst ,v) (emit "mov ~a, ~a" dst (Value v))]
                [(cmp ,reg ,v) (emit "cmp ~a, ~a" reg (Value v))]
                [(b ,label-name) (emit "b ~a" label-name)]
+               [(bl ,label-name) (emit "bl ~a" label-name)]
                [(b.eq ,label-name) (emit "b.eq ~a" label-name)]
                [(b.ne ,label-name) (emit "b.ne ~a" label-name)]
                [(b.lt ,label-name) (emit "b.lt ~a" label-name)]
@@ -93,6 +95,5 @@
             (emit ".globl _scheme_entry")
             (emit "_scheme_entry:")
 
-            (emit "mov x28, x0")
             (map emit-instruction inst*)
             (emit "ret")]])
