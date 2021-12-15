@@ -48,8 +48,7 @@
                (b.lt label-name)
                (b.le label-name)
                (b.gt label-name)
-               (b.ge label-name)
-               )
+               (b.ge label-name))
   (Program [p]
            (inst* ...)))
 
@@ -85,8 +84,7 @@
                [(b.le ,label-name) (emit "b.le ~a" label-name)]
                [(b.gt ,label-name) (emit "b.gt ~a" label-name)]
                [(b.ge ,label-name) (emit "b.ge ~a" label-name)]
-               [else (emit "// ignored ~a" i)]
-               ])
+               [else (error 'bad "instruction: ~a" i)]])
 (define-pass emit-program : (arm64 Program) (p) -> * ()
   [Program : Program (p) -> * ()
            [(,inst* ...)
