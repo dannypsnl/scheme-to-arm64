@@ -30,6 +30,17 @@
                  [(null) `(mov x0 ,(immediate-rep null))]
                  [else `(ldr x0 [sp ,(lookup name)])])]
         [,c `(mov x0 ,(immediate-rep c))]
+        [,v (match-define (vector vs ...) v)
+            (list `(mov x0 ,(length vs))
+                  `(str x0 [x28 0])
+                  `(orr x1 x28 ,vec-tag)
+                  `(add x28 x28 ,wordsize)
+                  (for/list ([v vs]
+                             [i (range (length vs))])
+                    (list (Expr v)
+                          `(str x0 [x28 ,(* wordsize i)])))
+                  `(add x28 x28 ,(* wordsize (length vs)))
+                  `(mov x0 x1))]
         [(define ,name ,e)
          (define ret
            (list (Expr e)
@@ -169,6 +180,49 @@
                [(and) `(mov x0 ,(immediate-rep #f))]
                [(or) `(mov x0 ,(immediate-rep #t))])
              `(label ,end))]
+           [(make-string make-vector)
+            (list
+             (Expr (car e1))
+             `(lsr x0 x0 ,fixnum-shift)
+             ; store length into new structure
+             `(str x0 [x28 0])
+             ; save pointer and tag it
+             `(orr x1 x28 ,(case op [(make-string) str-tag] [(make-vector) vec-tag]))
+             `(add x28 x28 ,8)
+             (when (> (length e1) 1)
+               (set! stack-index (- stack-index wordsize))
+               (define e (Expr (cadr e1)))
+               (set! stack-index (+ stack-index wordsize))
+               (list
+                e
+                (case op
+                  [(make-string) `(lsr w0 w0 ,char-shift)]
+                  [else '()])
+                (for/list ([i (range (car e1))])
+                  `(str x0 [x28 ,(* (case op [(make-string) 1] [(make-vector) wordsize]) i)]))
+                `(add x28 x28 ,(* (case op [(make-string) 1] [(make-vector) wordsize]) (car e1)))))
+             `(mov x0 x1))]
+           [(string-ref vector-ref)
+            (set! stack-index (- stack-index wordsize))
+            (define e (Expr (cadr e1)))
+            (set! stack-index (+ stack-index wordsize))
+            (list
+             (Expr (car e1))
+             `(add x1 x0 ,(- wordsize (case op [(string-ref) str-tag] [(vector-ref) vec-tag])))
+             e
+             ; get index, so now index is in x0
+             ; x1 is current pointer, x1 <- x1 + x0>>shift is offset of value
+             `(add x1 x1 x0 lsr ,(case op [(string-ref) fixnum-shift] [(vector-ref) (+ fixnum-shift 2)]))
+             `(ldr x0 [x1 0])
+             (case op ; now we convert loaded char back to encoded char
+               [(string-ref) (list `(lsl x0 x0 ,char-shift)
+                                   `(orr x0 x0 ,char-tag))]
+               [else '()]))]
+           [(string-length vector-length)
+            (list (Expr (car e1))
+                  `(sub x0 x0 ,(case op [(string-length) str-tag] [(vector-length) vec-tag]))
+                  `(ldr x0 [x0 0])
+                  `(lsl x0 x0 ,fixnum-shift))]
            [else `(comment "todo function call")])])
   (Expr e))
 (define-pass convert : (arm64 Instruction) (i) -> (arm64 Program) ()
@@ -271,16 +325,16 @@
   (check-equal? (compile-and-eval '(list 1 2 3)) '(1 2 3))
   (check-equal? (compile-and-eval '(list 1 (list 1 2 3) 3)) '(1 (1 2 3) 3))
   ; string
-  ; (check-equal? (compile-and-eval '(make-string 5 #\c)) "ccccc")
-  ; (check-equal? (compile-and-eval '(string-ref (make-string 2 #\q) 1)) #\q)
-  ; (check-equal? (compile-and-eval '(string? (make-string 2 #\a))) #t)
-  ; (check-equal? (compile-and-eval '(string-length (make-string 2 #\b))) 2)
+  (check-equal? (compile-and-eval '(make-string 5 #\c)) "ccccc")
+  (check-equal? (compile-and-eval '(string-ref (make-string 2 #\q) 1)) #\q)
+  (check-equal? (compile-and-eval '(string? (make-string 2 #\a))) #t)
+  (check-equal? (compile-and-eval '(string-length (make-string 2 #\b))) 2)
   ; vector
-  ; (check-equal? (compile-and-eval '#(1 2 3)) #(1 2 3))
-  ; (check-equal? (compile-and-eval '(vector 1 2 3)) #(1 2 3))
-  ; (check-equal? (compile-and-eval '(vector)) #())
-  ; (check-equal? (compile-and-eval '(make-vector 2 #\c)) #(#\c #\c))
-  ; (check-equal? (compile-and-eval '(vector-ref (make-vector 2 2) 0)) 2)
-  ; (check-equal? (compile-and-eval '(vector? (make-vector 2 2))) #t)
-  ; (check-equal? (compile-and-eval '(vector-length (make-vector 3 #\b))) 3)
+  (check-equal? (compile-and-eval '#(1 2 3)) #(1 2 3))
+  (check-equal? (compile-and-eval '(vector 1 2 3)) #(1 2 3))
+  (check-equal? (compile-and-eval '(vector)) #())
+  (check-equal? (compile-and-eval '(make-vector 2 #\c)) #(#\c #\c))
+  (check-equal? (compile-and-eval '(vector-ref (make-vector 2 2) 0)) 2)
+  (check-equal? (compile-and-eval '(vector? (make-vector 2 2))) #t)
+  (check-equal? (compile-and-eval '(vector-length (make-vector 3 #\b))) 3)
   )

@@ -7,9 +7,11 @@
   (or (integer? x) (char? x) (boolean? x)))
 (define-language scm
   (terminals (symbol [name])
-             (constant [c]))
+             (constant [c])
+             (vector [v]))
   (Expr [e body]
         c
+        v
         name
         (define name e)
         (begin e* ... e)
@@ -43,12 +45,13 @@
          `(if ,e0 ,e1 (void))]])
 
 (define-language scm/L3 (extends scm/L2))
-(define-pass list->cons : (scm/L2 Expr) (e) -> (scm/L3 Expr) ()
+(define-pass normalize-data : (scm/L2 Expr) (e) -> (scm/L3 Expr) ()
   [Expr : Expr (e) -> Expr ()
         [(,[e0] ,[e1] ...)
-         (if (member e0 '(list quote))
-             (foldr (λ (v r) `(cons ,v ,r)) `null e1)
-             `(,e0 ,e1 ...))]])
+         (cond
+           [(member e0 '(list quote)) (foldr (λ (v r) `(cons ,v ,r)) `null e1)]
+           [(equal? e0 'vector) `,(apply vector e1)]
+           [else `(,e0 ,e1 ...)])]])
 
 (define-language scm/Final (extends scm/L3))
 (define-pass final : (scm/L3 Expr) (e) -> (scm/Final Expr) ()
@@ -61,5 +64,5 @@
          (parse-scm x)
          (list wrap-begin
                remove-if
-               list->cons
+               normalize-data
                final)))

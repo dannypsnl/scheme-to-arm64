@@ -5,7 +5,10 @@
 
 (require "../emit.rkt")
 
+(define ops '(lsr lsl))
+(define (op? x) (member x ops))
 (define arm64-regs '(sp
+                     w0
                      x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10
                      x11 x12 x13 x14 x15 x16 x17 x18 x19 x20
                      x21 x22 x23 x24 x25 x26 x27 x28 x29 x30))
@@ -17,6 +20,7 @@
   (terminals (string [comment-string])
              (arm64-reg [reg src dst])
              (symbol [label-name])
+             (op [op])
              (integer [shift imme-value])
              (list [instructions]))
   (Value [v]
@@ -30,6 +34,8 @@
                (str src [dst shift])
                (ldr dst [src shift])
                (lsr dst src imme-value)
+               (lsl dst src imme-value)
+               (add dst src0 src1 op v)
                (add dst src v)
                (sub dst src v)
                (mul dst src v)
@@ -60,7 +66,9 @@
                [(str ,src [,dst ,shift]) (emit "str ~a, [~a, ~a]" src dst shift)]
                [(ldr ,dst [,src ,shift]) (emit "ldr ~a, [~a, ~a]" dst src shift)]
                [(lsr ,dst ,src ,imme-value) (emit "lsr ~a, ~a, ~a" dst src imme-value)]
+               [(lsl ,dst ,src ,imme-value) (emit "lsl ~a, ~a, ~a" dst src imme-value)]
                [(add ,dst ,src ,v) (emit "add ~a, ~a, ~a" dst src (Value v))]
+               [(add ,dst ,src0 ,src1 ,op ,v) (emit "add ~a, ~a, ~a, ~a ~a" dst src0 src1 op (Value v))]
                [(sub ,dst ,src ,v) (emit "sub ~a, ~a, ~a" dst src (Value v))]
                [(mul ,dst ,src ,v) (emit "mul ~a, ~a, ~a" dst src (Value v))]
                [(sdiv ,dst ,src ,v) (emit "sdiv ~a, ~a, ~a" dst src (Value v))]
