@@ -3,8 +3,7 @@
 
 extern long scheme_entry();
 
-#define HEAP_SIZE 0x400000
-void *malloc(size_t size) { return GC_MALLOC(size); }
+long scm_malloc(size_t size) { return (long)GC_MALLOC(size); }
 
 int main() {
   long val = scheme_entry();
