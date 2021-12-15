@@ -42,18 +42,15 @@
                   `(add x28 x28 ,(* wordsize (length vs)))
                   `(mov x0 x1))]
         [(define ,name ,e)
-         (define ret
-           (list (Expr e)
-                 `(str x0 [sp ,stack-index])))
-         (var-set! name stack-index)
+         (define var-offset stack-index)
+         (var-set! name var-offset)
+         (define r (Expr e))
          (set! stack-index (- stack-index wordsize))
-         ret]
+         (list r `(str x0 [sp ,var-offset]))]
         [(begin ,e* ... ,e)
          (parameterize ([env (make-env (make-hash))])
            (for/list ([e (append e* (list e))])
              (Expr e)))]
-        [(let ([,name* ,e*] ...) ,body)
-         `(comment "ignore")]
         [(cond [,e ,body] ...)
          (define-label end)
          (append
@@ -112,10 +109,10 @@
                                (case op
                                  [(+) `(add x1 x1 x0)]
                                  [(-) `(sub x1 x1 x0)]
-                                 [(*) `(lsr x0 x0 ,fixnum-shift)
-                                      `(mul x1 x1 x0)]
-                                 [(/) `(lsr x0 x0 ,fixnum-shift)
-                                      `(sdiv x1 x1 x0)])
+                                 [(*) (list `(lsr x0 x0 ,fixnum-shift)
+                                            `(mul x1 x1 x0))]
+                                 [(/) (list `(lsr x0 x0 ,fixnum-shift)
+                                            `(sdiv x1 x1 x0))])
                                `(str x1 [sp ,stack-index])))
                        `(ldr x0 [sp ,stack-index]))]
            [(= < > <= >= char=?)
@@ -256,6 +253,7 @@
   (check-equal? (compile-and-eval '1) 1)
   (check-equal? (compile-and-eval '(add1 1)) 2)
   (check-equal? (compile-and-eval '(+ 1 1)) 2)
+  (check-equal? (compile-and-eval '(* 1 2)) 2)
   (check-equal? (compile-and-eval '(+ 1 2 3)) 6)
   (check-equal? (compile-and-eval '(- 1 2 3)) -4)
   ; conditional
@@ -280,16 +278,16 @@
   (check-equal? (compile-and-eval '(integer? 1)) #t)
   (check-equal? (compile-and-eval '(integer? #f)) #f)
   ; let and define
-  ; (check-equal? (compile-and-eval '(let ([x 1]) x)) 1)
-  ; (check-equal? (compile-and-eval '(let ([x 1])
-  ;                                    (let ([y (* 2 x)])
-  ;                                      (cons x y))))
-  ;               '(1 . 2))
-  ; (check-equal? (compile-and-eval '(let ()
-  ;                                    (define x 1)
-  ;                                    (define y 2)
-  ;                                    (cons x y)))
-  ;               '(1 . 2))
+  (check-equal? (compile-and-eval '(let ([x 1]) x)) 1)
+  (check-equal? (compile-and-eval '(let ([x 1])
+                                     (let ([y (* 2 x)])
+                                       (cons x y))))
+                '(1 . 2))
+  (check-equal? (compile-and-eval '(let ()
+                                     (define x 1)
+                                     (define y 2)
+                                     (cons x y)))
+                '(1 . 2))
   ; logical
   (check-equal? (compile-and-eval '(and #t #t)) #t)
   (check-equal? (compile-and-eval '(and #f #t)) #f)

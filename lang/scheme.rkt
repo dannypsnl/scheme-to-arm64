@@ -26,12 +26,12 @@
   (Expr [e body]
         (- (let ([name* e*] ...) body* ... body)
            (cond [e body* ... body] ...))
-        (+ (let ([name* e*] ...) body)
-           (cond [e body] ...))))
+        (+ (cond [e body] ...))))
 (define-pass wrap-begin : (scm Expr) (expr) -> (scm/L1 Expr) ()
   [Expr : Expr (expr) -> Expr ()
         [(let ([,name* ,[e*]] ...) ,[body*] ... ,[body])
-         `(let ([,name* ,e*] ...) (begin ,body* ... ,body))]
+         `(begin (define ,name* ,e*) ...
+                 ,body* ... ,body)]
         [(cond [,[e] ,[body*] ... ,[body]] ...)
          `(cond [,e (begin ,body* ... ,body)] ...)]])
 
