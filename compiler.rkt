@@ -35,7 +35,9 @@
         [,c `(mov x0 ,(immediate-rep c))]
         [,v (match-define (vector vs ...) v)
             (list `(mov x0 ,(* (length vs) wordsize))
-                  `(bl _scm_malloc)
+                  `(stp x29 x30 [sp 8])
+                  `(bl _GC_malloc)
+                  `(ldp x29 x30 [sp 8])
                   `(mov x27 x0)
                   `(mov x0 ,(length vs))
                   `(str x0 [x27 0])
@@ -43,7 +45,7 @@
                   (for/list ([v vs]
                              [i (range (length vs))])
                     (list (Expr v)
-                          `(str x0 [x27 ,(* wordsize i)])))
+                          `(str x0 [x27 ,(* (add1 i) wordsize)])))
                   `(mov x0 x1))]
         [(define ,name ,e)
          (define var-offset stack-index)
@@ -82,21 +84,23 @@
                `(label ,end))]
         [(prim ,op ,e1 ...)
          (case op
-           [(cons) (set! stack-index (- stack-index wordsize))
-                   (define e (Expr (cadr e1)))
+           [(cons) (match-define (list e-car e-cdr) e1)
+                   (set! stack-index (- stack-index wordsize))
+                   (define e (Expr e-cdr))
                    (set! stack-index (+ stack-index wordsize))
                    (list
-                    ; store car/cdr to heap
-                    (Expr (car e1))
+                    (Expr e-car)
                     `(str x0 [sp ,stack-index])
                     e
                     `(ldr x1 [sp ,stack-index])
                     `(mov x2 x0)
                     ; going to malloc 2 words
                     `(mov x0 ,(* 2 wordsize))
-                    `(bl _scm_malloc)
-                    `(mov x27 x0)
-                    `(stp x1 x2 [x27])
+                    `(stp x29 x30 [sp 8])
+                    `(bl _GC_malloc)
+                    `(ldp x29 x30 [sp 8])
+                    ; store car/cdr to heap
+                    `(stp x1 x2 [x0 0])
                     ; save pointer and tag it
                     `(orr x0 x0 ,pair-tag))]
            [(add1 sub1) (list (Expr (car e1))
@@ -184,26 +188,48 @@
                [(or) `(mov x0 ,(immediate-rep #t))])
              `(label ,end))]
            [(make-string make-vector)
-            (list
-             `(mov x0 ,(* (length e1) wordsize))
-             `(bl _scm_malloc)
-             `(mov x27 x0)
-             (Expr (car e1))
-             `(lsr x0 x0 ,fixnum-shift)
-             ; store length into new structure
-             `(str x0 [x27 0])
-             ; save pointer and tag it
-             `(orr x1 x27 ,(case op [(make-string) str-tag] [(make-vector) vec-tag]))
-             (when (> (length e1) 1)
-               (set! stack-index (- stack-index wordsize))
-               (define e (Expr (cadr e1)))
-               (set! stack-index (+ stack-index wordsize))
-               (list
-                e
-                (if (equal? op 'make-string) `(lsr w0 w0 ,char-shift) '())
-                (for/list ([i (range (car e1))])
-                  `(str x0 [x27 ,(* (case op [(make-string) 1] [(make-vector) wordsize]) i)]))))
-             `(mov x0 x1))]
+            (match e1
+              [`(,len) (list (Expr len)
+                             `(lsr x0 x0 ,fixnum-shift)
+                             `(stp x29 x30 [sp 8])
+                             `(bl _GC_malloc)
+                             `(ldp x29 x30 [sp 8])
+                             `(mov x27 x0)
+                             ; save pointer and tag it
+                             `(orr x1 x27 ,(case op [(make-string) str-tag] [(make-vector) vec-tag]))
+                             (Expr len)
+                             `(lsr x0 x0 ,fixnum-shift)
+                             `(str x0 [x27 0])
+                             `(mov x0 x1))]
+              [`(,len ,fit-by)
+               (define-label loop)
+               (list (Expr len)
+                     `(lsr x0 x0 ,fixnum-shift)
+                     `(mov x3 x0)
+                     (if (equal? op 'make-vector)
+                         (list `(mov x1 ,wordsize)
+                               `(mul x0 x0 x1))
+                         '())
+                     `(add x0 x0 ,wordsize)
+                     `(stp x29 x30 [sp 8])
+                     `(bl _GC_malloc)
+                     `(ldp x29 x30 [sp 8])
+                     `(mov x27 x0)
+                     ; save pointer and tag it
+                     `(orr x1 x27 ,(case op [(make-string) str-tag] [(make-vector) vec-tag]))
+                     ; store length into new structure
+                     `(str x3 [x27 0])
+                     ; set counter x2 by len
+                     `(mov x2 x3)
+                     `(label ,loop)
+                     `(sub x2 x2 ,1)
+                     (Expr fit-by)
+                     (if (equal? op 'make-string) `(lsr w0 w0 ,char-shift) '())
+                     `(sub x3 x27 x2)
+                     `(str x0 [x3 0])
+                     `(cmp x2 ,1)
+                     `(b.eq ,loop)
+                     `(mov x0 x1))])]
            [(string-ref vector-ref)
             (set! stack-index (- stack-index wordsize))
             (define e (Expr (cadr e1)))
