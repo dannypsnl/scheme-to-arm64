@@ -203,6 +203,7 @@
                   `(lsr x0 x0 ,fixnum-shift)
                   ; store length
                   `(str x0 [x27 0])
+                  `(add x27 x27 ,wordsize)
                   ; middle
                   (match e1
                     [`(,len) (list)]
@@ -214,11 +215,11 @@
                       ; set counter x2 by len
                       `(mov x2 ,0)
                       `(label ,loop)
-                      ; increase pointer with wordsize
-                      `(add x27 x27 ,wordsize)
                       (Expr fit-by)
                       (if (equal? op 'make-string) `(lsr w0 w0 ,char-shift) '())
                       `(str x0 [x27 0])
+                      ; increase pointer with shift
+                      `(add x27 x27 ,(case op [(make-string) 1] [(make-vector) wordsize]))
                       `(cmp x2 x3)
                       `(add x2 x2 ,1)
                       `(b.lt ,loop))])
