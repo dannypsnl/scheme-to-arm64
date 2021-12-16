@@ -203,22 +203,25 @@
                   `(lsr x0 x0 ,fixnum-shift)
                   ; store length
                   `(str x0 [x27 0])
-                  `(add x27 x27 ,wordsize)
                   ; middle
                   (match e1
                     [`(,len) (list)]
                     [`(,len ,fit-by)
                      (define-label loop)
-                     (list ; set counter x2 by len
-                      `(mov x2 x0)
+                     (list
+                      ; move len to x3
+                      `(mov x3 x0)
+                      ; set counter x2 by len
+                      `(mov x2 ,0)
                       `(label ,loop)
-                      `(sub x2 x2 ,1)
+                      ; increase pointer with wordsize
+                      `(add x27 x27 ,wordsize)
                       (Expr fit-by)
                       (if (equal? op 'make-string) `(lsr w0 w0 ,char-shift) '())
-                      `(sub x3 x27 x2)
-                      `(str x0 [x3 0])
-                      `(cmp x2 ,1)
-                      `(b.eq ,loop))])
+                      `(str x0 [x27 0])
+                      `(cmp x2 x3)
+                      `(add x2 x2 ,1)
+                      `(b.lt ,loop))])
                   ; middle
                   `(mov x0 x1))]
            [(string-ref vector-ref)
