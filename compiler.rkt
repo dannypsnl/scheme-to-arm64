@@ -29,9 +29,9 @@
                             `(mov x0 ,(immediate-rep #t))
                             `(label ,end))])
   (Expr : Expr (e) -> Instruction ()
-        [,name (case name
-                 [(null) `(mov x0 ,(immediate-rep null))]
-                 [else `(ldr x0 [sp ,(lookup name)])])]
+        [,name (guard (eq? name 'null))
+               `(mov x0 ,(immediate-rep null))]
+        [,name `(ldr x0 [sp ,(lookup name)])]
         [,c `(mov x0 ,(immediate-rep c))]
         [,v (match-define (vector vs ...) v)
             (list `(mov x0 ,(length vs))
