@@ -97,7 +97,7 @@
                     `(stp x29 x30 [sp 8])
                     `(bl _GC_malloc)
                     `(ldp x29 x30 [sp 8])
-                    `(str x2 [sp ,stack-index])
+                    `(str x0 [sp ,stack-index])
                     ; compile car
                     (Expr-on-offset e-car wordsize)
                     `(str x0 [sp ,(- stack-index wordsize)])
