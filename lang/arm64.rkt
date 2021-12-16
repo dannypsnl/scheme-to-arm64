@@ -1,7 +1,8 @@
 #lang nanopass
 
 (provide arm64
-         emit-program)
+         emit-program
+         flatten-arm64)
 
 (define ops '(lsr lsl))
 (define (op? x) (member x ops))
@@ -52,11 +53,17 @@
   (Program [p]
            (inst* ...)))
 
-(define (emit . args)
-  (apply printf args)
-  (newline))
+(define-language arm64/Final
+  (extends arm64)
+  (Instruction [inst]
+               (- instructions)))
+(define-pass final-arm64 : (arm64 Instruction) (i) -> (arm64/Final Instruction) ())
+(define-pass flatten-arm64 : (arm64 Instruction) (i) -> (arm64/Final Program) ()
+  (if (list? i)
+      `(,(map final-arm64 (flatten i))...)
+      `(,(final-arm64 i))))
 
-(define-pass emit-instruction : (arm64 Instruction) (i) -> * ()
+(define-pass emit-instruction : (arm64/Final Instruction) (i) -> * ()
   [Value : Value (v) -> * ()
          [,reg reg]
          [,imme-value (format "#~a" imme-value)]]
@@ -83,9 +90,8 @@
                [(b.lt ,label-name) (emit "b.lt ~a" label-name)]
                [(b.le ,label-name) (emit "b.le ~a" label-name)]
                [(b.gt ,label-name) (emit "b.gt ~a" label-name)]
-               [(b.ge ,label-name) (emit "b.ge ~a" label-name)]
-               [else (error 'bad "instruction: ~a" i)]])
-(define-pass emit-program : (arm64 Program) (p) -> * ()
+               [(b.ge ,label-name) (emit "b.ge ~a" label-name)]])
+(define-pass emit-program : (arm64/Final Program) (p) -> * ()
   [Program : Program (p) -> * ()
            [(,inst* ...)
             (emit ".section __TEXT,__text,regular,pure_instructions")
@@ -96,3 +102,7 @@
             (emit "mov x28, x0")
             (map emit-instruction inst*)
             (emit "ret")]])
+
+(define (emit . args)
+  (apply printf args)
+  (newline))

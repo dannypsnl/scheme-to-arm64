@@ -225,12 +225,9 @@
         [(,e0 ,e1 ...)
          `(comment "todo function call")])
   (Expr e))
-(define-pass convert : (arm64 Instruction) (i) -> (arm64 Program) ()
-  (if (list? i)
-      `(,(flatten i) ...)
-      `(,i)))
+
 (define (compile-expr scm-exp stack-index)
-  (convert (compile-scm scm-exp stack-index)))
+  (flatten-arm64 (compile-scm scm-exp stack-index)))
 
 (define (compile-program e)
   (emit-program (compile-expr (E e) (- wordsize))))
