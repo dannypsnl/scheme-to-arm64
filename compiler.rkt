@@ -17,7 +17,13 @@
 (define wordsize 8)
 
 (define-pass compile-scm : (scm/Final Expr) (e si) -> (arm64 Instruction) ()
-  (definitions (define stack-index si))
+  (definitions
+    (define stack-index si)
+    (define (Expr-on-offset e offset)
+      (set! stack-index (- stack-index offset))
+      (define r (Expr e))
+      (set! stack-index (+ stack-index offset))
+      r))
   (emit-is-x0-equal-to : Expr (e) -> Instruction ()
                        [,c (define-label if-true end)
                            (list
@@ -85,22 +91,20 @@
         [(prim ,op ,e1 ...)
          (case op
            [(cons) (match-define (list e-car e-cdr) e1)
-                   (set! stack-index (- stack-index wordsize))
-                   (define e (Expr e-cdr))
-                   (set! stack-index (+ stack-index wordsize))
                    (list
                     ; going to malloc 2 words
                     `(mov x0 ,(* 2 wordsize))
                     `(stp x29 x30 [sp 8])
                     `(bl _GC_malloc)
                     `(ldp x29 x30 [sp 8])
-                    `(mov x2 x0)
+                    `(str x2 [sp ,stack-index])
                     ; compile car
-                    (Expr e-car)
-                    `(str x0 [sp ,stack-index])
+                    (Expr-on-offset e-car wordsize)
+                    `(str x0 [sp ,(- stack-index wordsize)])
                     ; compile cdr
-                    e
-                    `(ldr x1 [sp ,stack-index])
+                    (Expr-on-offset e-cdr (* 2 wordsize))
+                    `(ldr x1 [sp ,(- stack-index wordsize)])
+                    `(ldr x2 [sp ,stack-index])
                     ; store car/cdr to heap
                     `(stp x1 x0 [x2 0])
                     ; save pointer and tag it
