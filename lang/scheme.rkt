@@ -48,9 +48,9 @@
 (define-pass normalize-data : (scm/L2 Expr) (e) -> (scm/L3 Expr) ()
   [Expr : Expr (e) -> Expr ()
         [(,[e0] ,[e1] ...)
-         (cond
-           [(member e0 '(list quote)) (foldr (λ (v r) `(cons ,v ,r)) `null e1)]
-           [(equal? e0 'vector) `,(apply vector e1)]
+         (case e0
+           [(list quote) (foldr (λ (v r) `(cons ,v ,r)) `null e1)]
+           [(vector) `,(apply vector e1)]
            [else `(,e0 ,e1 ...)])]])
 
 (define primitive-functions
