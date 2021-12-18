@@ -91,24 +91,14 @@
         [(prim ,op ,e1 ...)
          (case op
            [(cons) (match-define (list e-car e-cdr) e1)
-                   (list
-                    ; going to malloc 2 words
-                    `(mov x0 ,(* 2 wordsize))
-                    `(stp x29 x30 [sp 8])
-                    `(bl _GC_malloc)
-                    `(ldp x29 x30 [sp 8])
-                    `(str x0 [sp ,stack-index])
-                    ; compile car
-                    (Expr-on-offset e-car wordsize)
-                    `(str x0 [sp ,(- stack-index wordsize)])
-                    ; compile cdr
-                    (Expr-on-offset e-cdr (* 2 wordsize))
-                    `(ldr x1 [sp ,(- stack-index wordsize)])
-                    `(ldr x2 [sp ,stack-index])
-                    ; store car/cdr to heap
-                    `(stp x1 x0 [x2 0])
-                    ; save pointer and tag it
-                    `(orr x0 x2 ,pair-tag))]
+                   (list (Expr e-car)
+                         `(str x0 [sp ,stack-index])
+                         (Expr-on-offset e-cdr wordsize)
+                         `(mov x1 x0)
+                         `(ldr x0 [sp ,stack-index])
+                         `(stp x29 x30 [sp 8])
+                         `(bl __scheme_cons)
+                         `(ldp x29 x30 [sp 8]))]
            [(add1 sub1) (list (Expr (car e1))
                               (case op
                                 [(add1) `(add x0 x0 ,(immediate-rep 1))]
@@ -344,6 +334,7 @@
   (check-equal? (compile-and-eval '(null? null)) #t)
   (check-equal? (compile-and-eval '(cons #\c 1)) (cons #\c 1))
   (check-equal? (compile-and-eval '(cons 1 (cons 2 (cons 3 4)))) '(1 2 3 . 4))
+  (check-equal? (compile-and-eval '(cons (cons 2 3) 1)) '((2 . 3) . 1))
   (check-equal? (compile-and-eval '(car (cons 1 2))) 1)
   (check-equal? (compile-and-eval '(cdr (cons 1 2))) 2)
   (check-equal? (compile-and-eval '(quote 1 2 3)) '(1 2 3))
