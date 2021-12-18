@@ -182,41 +182,17 @@
                [(or) `(mov x0 ,(immediate-rep #t))])
              `(label ,end))]
            [(make-string make-vector)
-            (define len (car e1))
-            (list (Expr len)
-                  `(lsr x0 x0 ,fixnum-shift)
-                  `(stp x29 x30 [sp 8])
-                  `(bl _GC_malloc)
-                  `(ldp x29 x30 [sp 8])
-                  `(mov x27 x0)
-                  ; save pointer and tag it
-                  `(orr x1 x27 ,(case op [(make-string) str-tag] [(make-vector) vec-tag]))
-                  (Expr len)
-                  `(lsr x0 x0 ,fixnum-shift)
-                  ; store length
-                  `(str x0 [x27 0])
-                  `(add x27 x27 ,wordsize)
-                  ; middle
-                  (match e1
-                    [`(,len) (list)]
-                    [`(,len ,fit-by)
-                     (define-label loop)
-                     (list
-                      ; move len to x3
-                      `(mov x3 x0)
-                      ; set counter x2 by len
-                      `(mov x2 ,0)
-                      `(label ,loop)
-                      (Expr fit-by)
-                      (if (equal? op 'make-string) `(lsr w0 w0 ,char-shift) '())
-                      `(str x0 [x27 0])
-                      ; increase pointer with shift
-                      `(add x27 x27 ,(case op [(make-string) 1] [(make-vector) wordsize]))
-                      `(cmp x2 x3)
-                      `(add x2 x2 ,1)
-                      `(b.lt ,loop))])
-                  ; middle
-                  `(mov x0 x1))]
+            (append
+             (match e1
+               [`(,len) (list `(mov x1 0)
+                              (Expr len))]
+               [`(,len ,fill-by) (list (Expr fill-by)
+                                       `(mov x1 x0)
+                                       (Expr len))])
+             (list `(stp x29 x30 [sp 8])
+                   `(bl ,(case op [(make-string) '__scheme_make_string] [(make-vector) '__scheme_make_vector]))
+                   `(ldp x29 x30 [sp 8])))
+            ]
            [(string-ref vector-ref)
             (set! stack-index (- stack-index wordsize))
             (define e (Expr (cadr e1)))
