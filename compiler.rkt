@@ -91,11 +91,9 @@
         [(prim ,op ,e1 ...)
          (case op
            [(cons) (match-define (list e-car e-cdr) e1)
-                   (list (Expr e-car)
-                         `(str x0 [sp ,stack-index])
-                         (Expr-on-offset e-cdr wordsize)
+                   (list (Expr-on-offset e-cdr wordsize)
                          `(mov x1 x0)
-                         `(ldr x0 [sp ,stack-index])
+                         (Expr e-car)
                          `(stp x29 x30 [sp 8])
                          `(bl __scheme_cons)
                          `(ldp x29 x30 [sp 8]))]
