@@ -2,6 +2,8 @@
 
 #include "stdio.h"
 
+#define WORDSIZE 8
+
 #define FIXNUM_MASK 3
 #define FIXNUM_TAG 0
 #define FIXNUM_SHIFT 2
