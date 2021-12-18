@@ -1,14 +1,17 @@
+#include "gc.h"
 #include "representation.h"
-#include <stdlib.h>
 
-extern long scheme_entry(long *);
+extern long scheme_entry();
 
-#define HEAP_SIZE 0x400000
+long _scheme_cons(long car, long cdr) {
+  long *p = (long *)GC_malloc(2 * WORDSIZE);
+  p[0] = car;
+  p[1] = cdr;
+  return ((long)p) | PAIR_TAG;
+}
 
 int main() {
-  long *heap = malloc(8 * HEAP_SIZE);
-  long val = scheme_entry(heap);
+  long val = scheme_entry();
   show(val);
-  free(heap);
   printf("\n");
 }
