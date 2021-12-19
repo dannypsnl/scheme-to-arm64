@@ -6,7 +6,20 @@ void show(long x) {
     printf("%ld", x >> FIXNUM_SHIFT);
   } else if ((x & CHAR_MASK) == CHAR_TAG) {
     // character
-    printf("#\\%c", (char)(x >> CHAR_SHIFT));
+    char c = (char)(x >> CHAR_SHIFT);
+    switch (c) {
+    case '\0':
+      printf("#\\nul");
+      break;
+    case ' ':
+      printf("#\\space");
+      break;
+    case '\n':
+      printf("#\\newline");
+      break;
+    default:
+      printf("#\\%c", c);
+    }
   } else if ((x & BOOL_MASK) == BOOL_TAG) {
     // boolean
     if ((x >> BOOL_SHIFT) != 0) {
