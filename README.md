@@ -8,8 +8,6 @@ racket main.rkt -e '(char=? #\c #\c)'
 
 ### Installation
 
-The following commands install `libgc` and `libschemeruntime` into `/usr/local/lib` for standalone compiler.
-
 ```shell
 git submodule update --init
 cd bdwgc
@@ -17,8 +15,6 @@ cd bdwgc
 ./configure
 make -j 8
 make install
-cd ..
-make
 ```
 
 ### Develop
