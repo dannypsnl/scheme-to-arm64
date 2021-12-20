@@ -15,6 +15,7 @@
         name
         (define name e)
         (begin e* ... e)
+        (lambda (name* ...) body* ... body)
         (let ([name* e*] ...) body* ... body)
         (if e0 e1)
         (if e0 e1 e2)
@@ -24,11 +25,15 @@
 (define-language scm/L1
   (extends scm)
   (Expr [e body]
-        (- (let ([name* e*] ...) body* ... body)
+        (- (lambda (name* ...) body* ... body)
+           (let ([name* e*] ...) body* ... body)
            (cond [e body* ... body] ...))
-        (+ (cond [e body] ...))))
+        (+ (lambda (name* ...) body)
+           (cond [e body] ...))))
 (define-pass wrap-begin : (scm Expr) (expr) -> (scm/L1 Expr) ()
   [Expr : Expr (expr) -> Expr ()
+        [(lambda (,name* ...) ,[body*] ... ,[body])
+         `(lambda (,name* ...) `(begin ,body* ... ,body))]
         [(let ([,name* ,[e*]] ...) ,[body*] ... ,[body])
          `(begin (define ,name* ,e*) ...
                  ,body* ... ,body)]
@@ -89,8 +94,13 @@
             `(prim ,e0 ,e1 ...)]
            [else `(,e0 ,e1 ...)])]])
 
-(define-language scm/Final (extends scm/L4))
-(define-pass final : (scm/L4 Expr) (e) -> (scm/Final Expr) ()
+(define-language scm/L5
+  (extends scm/L4))
+(define-pass closure-conversion : (scm/L4 Expr) (e) -> (scm/L5 Expr) ()
+  [Expr : Expr (e) -> Expr ()])
+
+(define-language scm/Final (extends scm/L5))
+(define-pass final : (scm/L5 Expr) (e) -> (scm/Final Expr) ()
   [Expr : Expr (e) -> Expr ()])
 
 (define-parser parse-scm scm)
@@ -102,4 +112,5 @@
                remove-if
                normalize-data
                explicit-prim-call
+               closure-conversion
                final)))
