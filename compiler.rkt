@@ -252,19 +252,7 @@
   (with-output-to-file "/tmp/scheme.s"
     #:exists 'replace
     (lambda () (compile-program program)))
-  (with-output-to-file "/tmp/scheme.c"
-    #:exists 'replace
-    (lambda ()
-      (displayln "
-extern void show(long);
-extern int printf(const char * restrict format, ... );
-extern long scheme_entry();
-
-int main() {
-  show(scheme_entry());
-  printf(\"\\n\");
-}")))
-  (define cmd "clang -target arm64-apple-darwin-macho -lschemeruntime -lgc /tmp/scheme.c /tmp/scheme.s")
+  (define cmd "clang -target arm64-apple-darwin-macho -lgc /tmp/scheme.s c/runtime.c c/representation.c")
   (system (if debug? (string-append cmd " -g") cmd)))
 
 (define (compile-and-eval program)
