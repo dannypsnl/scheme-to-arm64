@@ -95,9 +95,45 @@
            [else `(,e0 ,e1 ...)])]])
 
 (define-language scm/L5
-  (extends scm/L4))
+  (extends scm/L4)
+  (Expr [e body]
+        (- (lambda (name* ...) body))
+        (+ (lifted-lambda (name* ...) body)
+           )))
+(define-pass freevars : (scm/L4 Expr) (e) -> * ()
+  (Expr : Expr (e) -> * ()
+        [,name (set name)]
+        [,c (set)]
+        [,v (match-define (vector vs ...) v)
+            (apply set vs)]
+        [(lambda (,name* ...) ,body)
+         (set-subtract (freevars body)
+                       (apply set name*))]
+        [(define ,name ,e)
+         (freevars e)]
+        [(begin ,e* ... ,e)
+         (set-union (apply set-union (map freevars e*))
+                    (freevars e))]
+        [(if ,e0 ,e1 ,e2)
+         (set-union  (freevars e0)
+                     (freevars e1)
+                     (freevars e2))]
+        [(cond [,e ,body] ...)
+         (apply set-union
+                (append (map freevars e)
+                        (map freevars body)))]
+        [(prim ,op ,e* ...)
+         (apply set-union (map freevars e*))]
+        [(,e0 ,e1 ...)
+         (set-union (freevars e0)
+                    (apply set-union (map freevars e1)))]))
 (define-pass closure-conversion : (scm/L4 Expr) (e) -> (scm/L5 Expr) ()
-  [Expr : Expr (e) -> Expr ()])
+  (Expr : Expr (e) -> Expr ()
+        [(lambda (,name* ...) ,body)
+         (define $env (gensym 'env))
+         (define freevars (freevars e))
+         ; convert free-vars in body by using reference to $env
+         `(lifted-lambda (,name* ... ,$env) ,body)]))
 
 (define-language scm/Final (extends scm/L5))
 (define-pass final : (scm/L5 Expr) (e) -> (scm/Final Expr) ()
@@ -114,3 +150,13 @@
                explicit-prim-call
                closure-conversion
                final)))
+
+(module+ test
+  (require rackunit)
+
+  (define-parser pL4 scm/L4)
+  (check-equal? (freevars (pL4 '(lambda (x) (prim cons x y))))
+                (set 'y))
+  (check-equal? (freevars (pL4 '(lambda (x) #(x y))))
+                (set 'y))
+  )
