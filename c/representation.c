@@ -1,9 +1,9 @@
 #include "representation.h"
 
-void show(long x) {
+void show(int64_t x) {
   if ((x & FIXNUM_MASK) == FIXNUM_TAG) {
     // integer
-    printf("%ld", x >> FIXNUM_SHIFT);
+    printf("%lld", x >> FIXNUM_SHIFT);
   } else if ((x & CHAR_MASK) == CHAR_TAG) {
     // character
     char c = (char)(x >> CHAR_SHIFT);
@@ -29,19 +29,19 @@ void show(long x) {
     }
   } else if ((x & PTR_MASK) == VOID_TAG) {
   } else if ((x & PTR_MASK) == PAIR_TAG) {
-    long *ptr = (long *)(x - PAIR_TAG);
+    int64_t *ptr = (int64_t *)(x - PAIR_TAG);
     if (ptr == NULL) {
       printf("()");
       return;
     }
     // either a list or a dotted pair
-    long car = ptr[0];
-    long cdr = ptr[1];
+    int64_t car = ptr[0];
+    int64_t cdr = ptr[1];
     putchar('(');
     show(car);
     // show additional space-separated elems
     while ((cdr & PTR_MASK) == PAIR_TAG) {
-      ptr = (long *)(cdr - PAIR_TAG);
+      ptr = (int64_t *)(cdr - PAIR_TAG);
       if (ptr == NULL)
         break;
 
@@ -57,16 +57,16 @@ void show(long x) {
     }
     putchar(')');
   } else if ((x & PTR_MASK) == STR_TAG) {
-    long *ptr = (long *)(x - STR_TAG);
-    long len = *ptr;
+    int64_t *ptr = (int64_t *)(x - STR_TAG);
+    int64_t len = *ptr;
     char *body = (char *)(ptr + 1);
     putchar('"');
     for (; len > 0; len--)
       putchar(*body++);
     putchar('"');
   } else if ((x & PTR_MASK) == VEC_TAG) {
-    long *ptr = (long *)(x - VEC_TAG);
-    long len = *ptr++;
+    int64_t *ptr = (int64_t *)(x - VEC_TAG);
+    int64_t len = *ptr++;
     printf("#(");
     for (; len > 0; len--) {
       show(*ptr++);
@@ -75,6 +75,6 @@ void show(long x) {
     }
     printf(")");
   } else {
-    printf("bad: %ld", x);
+    printf("bad: %lld", x);
   }
 }
