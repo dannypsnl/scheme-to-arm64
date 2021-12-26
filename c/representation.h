@@ -1,5 +1,6 @@
 #pragma once
 
+#include "stdint.h"
 #include "stdio.h"
 
 #define WORDSIZE 8
@@ -23,4 +24,4 @@
 #define VOID_TAG 5
 #define CLOSURE_TAG 6
 
-void show(long x);
+void show(int64_t x);

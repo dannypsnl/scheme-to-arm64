@@ -1,17 +1,17 @@
 #include "gc.h"
 #include "representation.h"
 
-extern long scheme_entry();
+extern int64_t scheme_entry();
 
-long _scheme_cons(long car, long cdr) {
-  long *p = (long *)GC_malloc(2 * WORDSIZE);
+int64_t _scheme_cons(int64_t car, int64_t cdr) {
+  int64_t *p = (int64_t *)GC_malloc(2 * WORDSIZE);
   p[0] = car;
   p[1] = cdr;
-  return ((long)p) | PAIR_TAG;
+  return ((int64_t)p) | PAIR_TAG;
 }
 
 int main() {
-  long val = scheme_entry();
+  int64_t val = scheme_entry();
   show(val);
   printf("\n");
 }
