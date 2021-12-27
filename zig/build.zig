@@ -16,6 +16,7 @@ pub fn build(b: *Builder) void {
     exe.addIncludeDir("/usr/local/include/gc");
     const flags = [_][]const u8{"-std=c11"};
     exe.addCSourceFile("/tmp/scheme.s", &flags);
+    exe.addCSourceFile("src/scheme_f.c", &flags);
     exe.setTarget(target);
     exe.setBuildMode(mode);
     exe.install();
