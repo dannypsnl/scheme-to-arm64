@@ -14,6 +14,7 @@ pub fn build(b: *Builder) void {
     const exe = b.addExecutable("zig", "src/main.zig");
     exe.linkSystemLibrary("gc");
     exe.addIncludeDir("/usr/local/include/gc");
+    exe.addIncludeDir("src");
     const flags = [_][]const u8{"-std=c11"};
     exe.addCSourceFile("/tmp/scheme.s", &flags);
     exe.addCSourceFile("src/scheme_f.c", &flags);
