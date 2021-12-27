@@ -6,6 +6,12 @@ A scheme to Arm64 compiler that keep simple for teaching purpose.
 racket main.rkt -e '(char=? #\c #\c)'
 ```
 
+To learn more compiler options
+
+```shell
+racket main.rkt --help
+```
+
 ### Installation
 
 ```shell

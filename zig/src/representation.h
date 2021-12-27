@@ -1,7 +1,3 @@
-#pragma once
-
-#include "stdio.h"
-
 #define WORDSIZE 8
 
 #define FIXNUM_MASK 3
@@ -22,5 +18,3 @@
 #define STR_TAG 3
 #define VOID_TAG 5
 #define CLOSURE_TAG 6
-
-void show(long x);
