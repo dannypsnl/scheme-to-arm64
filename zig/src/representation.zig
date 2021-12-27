@@ -32,7 +32,7 @@ pub fn show(x: i64) void {
         print("{d}", .{x >> FIXNUM_SHIFT});
     } else if ((x & CHAR_MASK) == CHAR_TAG) {
         // character
-        const c: u8 = @intCast(u8, x >> CHAR_SHIFT);
+        const c = @truncate(u8, @intCast(u64, x >> CHAR_SHIFT));
         switch (c) {
             0 => print("#\\nul", .{}),
             ' ' => print("#\\space", .{}),
