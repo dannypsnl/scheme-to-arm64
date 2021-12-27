@@ -5,7 +5,7 @@ const c = @cImport({
 });
 const rep = @import("./representation.zig");
 
-extern fn scheme_entry() callconv(.C) i64;
+extern "c" fn scheme_entry() i64;
 
 export fn _scheme_cons(car: i64, cdr: i64) callconv(.C) i64 {
     // const p: [*c]i64 = c.GC_malloc(2 * rep.WORDSIZE);
