@@ -9,7 +9,8 @@
     (compile-to-binary program)
     (parameterize ([current-directory "./zig"])
       (if debug?
-          (system "zig build run") ; FIXME: how to debug?
+          (begin (system "zig build")
+                 (system "lldb ./zig-out/bin/zig"))
           (system "zig build run")))
     (void))
 
