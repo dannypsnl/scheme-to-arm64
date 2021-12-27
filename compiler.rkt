@@ -259,7 +259,7 @@
     (match-define (list stdout stdin status stderr do)
       (process "zig build run"))
     (do 'wait)
-    (read stdout)))
+    (read stderr)))
 
 (module+ test
   (require rackunit)
