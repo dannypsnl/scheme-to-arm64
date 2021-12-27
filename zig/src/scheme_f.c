@@ -24,8 +24,9 @@ int64_t _scheme_make_vector(int64_t length, int64_t filled_by) {
   int64_t len = (int64_t)((uint64_t)length >> FIXNUM_SHIFT);
   int64_t *p = (int64_t *)GC_malloc(1 + len);
   p[0] = len;
-  for (int64_t i = 1; i < len + 1; i++) {
-    p[i] = filled_by;
+  int64_t *p2 = p + 1;
+  for (int64_t i = 0; i < len; i++) {
+    p2[i] = filled_by;
   }
   return ((int64_t)p) | VEC_TAG;
 }
