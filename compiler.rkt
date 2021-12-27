@@ -248,19 +248,18 @@
 (define (compile-program e)
   (emit-program (compile-expr (E e) (- wordsize))))
 
-(define (compile-to-binary program [debug? #f])
+(define (compile-to-binary program)
   (with-output-to-file "/tmp/scheme.s"
     #:exists 'replace
-    (lambda () (compile-program program)))
-  (define cmd "clang -target arm64-apple-darwin-macho -lgc /tmp/scheme.s c/runtime.c c/representation.c")
-  (system (if debug? (string-append cmd " -g") cmd)))
+    (lambda () (compile-program program))))
 
 (define (compile-and-eval program)
   (compile-to-binary program)
-  (match-define (list stdout stdin status stderr do)
-    (process "./a.out"))
-  (do 'wait)
-  (read stdout))
+  (parameterize ([current-directory "./zig"])
+    (match-define (list stdout stdin status stderr do)
+      (process "zig build run"))
+    (do 'wait)
+    (read stdout)))
 
 (module+ test
   (require rackunit)

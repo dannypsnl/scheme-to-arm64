@@ -5,10 +5,12 @@
            "compiler.rkt")
 
   (define (compile-and-run program debug?)
-    (compile-to-binary program debug?)
-    (if debug?
-        (system "lldb ./a.out")
-        (system "./a.out"))
+    ; generate /tmp/scheme.s
+    (compile-to-binary program)
+    (parameterize ([current-directory "./zig"])
+      (if debug?
+          (system "zig build run") ; FIXME: how to debug?
+          (system "zig build run")))
     (void))
 
   (define expression (make-parameter #f))
