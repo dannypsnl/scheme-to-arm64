@@ -59,7 +59,7 @@ pub fn show(x: i64) void {
         show(car);
         // show additional space-separated elems
         while ((cdr & PTR_MASK) == PAIR_TAG) {
-            ptr = @intToPtr([*]i64, @intCast(usize, cdr - PAIR_TAG));
+            ptr = @intToPtr(?[*]i64, @intCast(usize, cdr - PAIR_TAG));
             if (ptr == null) break;
 
             car = ptr.?[0];
