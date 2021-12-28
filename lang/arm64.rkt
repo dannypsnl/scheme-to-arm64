@@ -44,8 +44,8 @@
                (orr dst src v)
                (mov dst v)
                (cmp reg v)
+               (call label-name)
                (b label-name)
-               (bl label-name)
                (b.eq label-name)
                (b.ne label-name)
                (b.lt label-name)
@@ -87,8 +87,10 @@
                [(orr ,dst ,src ,v) (emit "orr ~a, ~a, ~a" dst src (Value v))]
                [(mov ,dst ,v) (emit "mov ~a, ~a" dst (Value v))]
                [(cmp ,reg ,v) (emit "cmp ~a, ~a" reg (Value v))]
+               [(call ,label-name) (emit "stp x29, x30, [sp, 8]")
+                                   (emit "bl ~a" label-name)
+                                   (emit "ldp x29, x30, [sp, 8]")]
                [(b ,label-name) (emit "b ~a" label-name)]
-               [(bl ,label-name) (emit "bl ~a" label-name)]
                [(b.eq ,label-name) (emit "b.eq ~a" label-name)]
                [(b.ne ,label-name) (emit "b.ne ~a" label-name)]
                [(b.lt ,label-name) (emit "b.lt ~a" label-name)]

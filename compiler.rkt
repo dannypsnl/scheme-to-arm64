@@ -39,11 +39,21 @@
                `(mov x0 ,(immediate-rep null))]
         [,name `(ldr x0 [sp ,(lookup name)])]
         [,c `(mov x0 ,(immediate-rep c))]
+        [,s (list `(mov x0 ,(+ wordsize (string-length s)))
+                  `(call _GC_malloc)
+                  `(mov x27 x0)
+                  `(mov x0 ,(string-length s))
+                  `(str x0 [x27 0])
+                  `(orr x1 x27 ,str-tag)
+                  `(add x27 x27 8)
+                  (for/list ([c (string->list s)]
+                             [i (range (string-length s))])
+                    (list `(mov w0 ,(char->integer c))
+                          `(str w0 [x27 ,i])))
+                  `(mov x0 x1))]
         [,v (match-define (vector vs ...) v)
-            (list `(mov x0 ,(* (length vs) wordsize))
-                  `(stp x29 x30 [sp 8])
-                  `(bl _GC_malloc)
-                  `(ldp x29 x30 [sp 8])
+            (list `(mov x0 ,(* (add1 (length vs)) wordsize))
+                  `(call _GC_malloc)
                   `(mov x27 x0)
                   `(mov x0 ,(length vs))
                   `(str x0 [x27 0])
@@ -94,9 +104,7 @@
                    (list (Expr-on-offset e-cdr wordsize)
                          `(mov x1 x0)
                          (Expr e-car)
-                         `(stp x29 x30 [sp 8])
-                         `(bl __scheme_cons)
-                         `(ldp x29 x30 [sp 8]))]
+                         `(call __scheme_cons))]
            [(add1 sub1) (list (Expr (car e1))
                               (case op
                                 [(add1) `(add x0 x0 ,(immediate-rep 1))]
@@ -189,10 +197,7 @@
                [`(,len ,fill-by) (list (Expr fill-by)
                                        `(mov x1 x0)
                                        (Expr len))])
-             (list `(stp x29 x30 [sp 8])
-                   `(bl ,(case op [(make-string) '__scheme_make_string] [(make-vector) '__scheme_make_vector]))
-                   `(ldp x29 x30 [sp 8])))
-            ]
+             (list `(call ,(case op [(make-string) '__scheme_make_string] [(make-vector) '__scheme_make_vector]))))]
            [(string-ref vector-ref)
             (set! stack-index (- stack-index wordsize))
             (define e (Expr (cadr e1)))
@@ -314,6 +319,7 @@
   (check-equal? (compile-and-eval '(list 1 2 3)) '(1 2 3))
   ; (check-equal? (compile-and-eval '(list 1 (list 1 2 3) 3)) '(1 (1 2 3) 3))
   ; string
+  (check-equal? (compile-and-eval '"abcde") "abcde")
   (check-equal? (compile-and-eval '(make-string 5 #\c)) "ccccc")
   (check-equal? (compile-and-eval '(string-ref (make-string 2 #\q) 1)) #\q)
   (check-equal? (compile-and-eval '(string? (make-string 2 #\a))) #t)

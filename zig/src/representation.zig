@@ -75,8 +75,8 @@ pub fn show(x: i64) void {
         var body: [*]u8 = @ptrCast([*]u8, ptr + 1);
         putchar('"');
         while (len > 0) {
-            body += 1;
             putchar(body[0]);
+            body += 1;
             len -= 1;
         }
         putchar('"');
@@ -88,9 +88,9 @@ pub fn show(x: i64) void {
         while (len > 0) {
             show(ptr[0]);
             ptr += 1;
-            if (len != 1)
-                putchar(' ');
             len -= 1;
+            if (len != 0)
+                putchar(' ');
         }
         print(")", .{});
     } else {
