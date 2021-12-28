@@ -52,7 +52,7 @@
                           `(str w0 [x27 ,i])))
                   `(mov x0 x1))]
         [,v (match-define (vector vs ...) v)
-            (list `(mov x0 ,(* (length vs) wordsize))
+            (list `(mov x0 ,(* (add1 (length vs)) wordsize))
                   `(call _GC_malloc)
                   `(mov x27 x0)
                   `(mov x0 ,(length vs))
