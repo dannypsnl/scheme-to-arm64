@@ -105,7 +105,6 @@
 (define-pass freevars : (scm/L4 Expr) (e) -> * ()
   (Expr : Expr (e) -> * ()
         [,name (set name)]
-        [,c (set)]
         [,v (match-define (vector vs ...) v)
             (apply set vs)]
         [(lambda (,name* ...) ,body)
@@ -128,7 +127,8 @@
          (apply set-union (map freevars e*))]
         [(,e0 ,e1 ...)
          (set-union (freevars e0)
-                    (apply set-union (map freevars e1)))]))
+                    (apply set-union (map freevars e1)))]
+        [else (set)]))
 (define-pass closure-conversion : (scm/L4 Expr) (e) -> (scm/L5 Expr) ()
   (Expr : Expr (e) -> Expr ()
         [(lambda (,name* ...) ,body)
