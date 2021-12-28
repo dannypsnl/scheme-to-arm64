@@ -101,6 +101,8 @@
   (Expr [e body]
         (- (lambda (name* ...) body))
         (+ (lifted-lambda (name* ...) body)
+           (make-closure e0 e1)
+           (make-env )
            )))
 (define-pass freevars : (scm/L4 Expr) (e) -> * ()
   (Expr : Expr (e) -> * ()
@@ -157,6 +159,8 @@
   (require rackunit)
 
   (define-parser pL4 scm/L4)
+  (check-equal? (freevars (pL4 '(lambda (x) (if x y z))))
+                (set 'y 'z))
   (check-equal? (freevars (pL4 '(lambda (x) (prim cons x y))))
                 (set 'y))
   (check-equal? (freevars (pL4 '(lambda (x) #(x y))))
