@@ -21,208 +21,212 @@
     (define stack-index si)
     (define (Expr-on-offset e offset)
       (set! stack-index (- stack-index offset))
-      (define r (Expr e))
-      (set! stack-index (+ stack-index offset))
-      r))
+      (Expr e)
+      (set! stack-index (+ stack-index offset))))
   (emit-is-x0-equal-to : Expr (e) -> Instruction ()
                        [,c (define-label if-true end)
-                           (list
-                            `(cmp x0 ,c)
-                            `(b.eq ,if-true)
-                            `(mov x0 ,(immediate-rep #f))
-                            `(b ,end)
-                            `(label ,if-true)
-                            `(mov x0 ,(immediate-rep #t))
-                            `(label ,end))])
+                           (emit `(cmp x0 ,c))
+                           (emit `(b.eq ,if-true))
+                           (emit `(mov x0 ,(immediate-rep #f)))
+                           (emit `(b ,end))
+                           (define if-true-block (new-block if-true))
+                           (parameterize ([current-block if-true-block])
+                             (emit `(mov x0 ,(immediate-rep #t))))
+                           (define end-block (new-block end))
+                           (current-block end-block)])
   (Expr : Expr (e) -> Instruction ()
         [,name (guard (eq? name 'null))
-               `(mov x0 ,(immediate-rep null))]
-        [,name `(ldr x0 [sp ,(lookup name)])]
-        [,c `(mov x0 ,(immediate-rep c))]
+               (emit `(mov x0 ,(immediate-rep null)))]
+        [,name (emit `(ldr x0 [sp ,(lookup name)]))]
+        [,c (emit `(mov x0 ,(immediate-rep c)))]
         [,v (match-define (vector vs ...) v)
-            (list `(mov x0 ,(* (length vs) wordsize))
-                  `(stp x29 x30 [sp 8])
-                  `(bl _GC_malloc)
-                  `(ldp x29 x30 [sp 8])
-                  `(mov x27 x0)
-                  `(mov x0 ,(length vs))
-                  `(str x0 [x27 0])
-                  `(orr x1 x27 ,vec-tag)
-                  (for/list ([v vs]
-                             [i (range (length vs))])
-                    (list (Expr v)
-                          `(str x0 [x27 ,(* (add1 i) wordsize)])))
-                  `(mov x0 x1))]
+            (emit `(mov x0 ,(* (length vs) wordsize)))
+            (emit `(stp x29 x30 [sp 8]))
+            (emit `(bl _GC_malloc))
+            (emit `(ldp x29 x30 [sp 8]))
+            (emit `(mov x27 x0))
+            (emit `(mov x0 ,(length vs)))
+            (emit `(str x0 [x27 0]))
+            (emit `(orr x1 x27 ,vec-tag))
+            (for ([v vs]
+                  [i (range (length vs))])
+              (Expr v)
+              (emit `(str x0 [x27 ,(* (add1 i) wordsize)])))
+            (emit `(mov x0 x1))]
         [(define ,name ,e)
          (define var-offset stack-index)
          (var-set! name var-offset)
-         (define r (Expr e))
+         (Expr e)
          (set! stack-index (- stack-index wordsize))
-         (list r `(str x0 [sp ,var-offset]))]
+         (emit `(str x0 [sp ,var-offset]))]
         [(begin ,e* ... ,e)
          (parameterize ([env (make-env (make-hash))])
-           (for/list ([e (append e* (list e))])
+           (for ([e (append e* (list e))])
              (Expr e)))]
         [(cond [,e ,body] ...)
          (define-label end)
-         (append
-          (for/list ([e e]
-                     [body body])
-            (define-label body-tag next)
-            (list
-             (Expr e)
-             (emit-is-x0-equal-to (immediate-rep #t))
-             `(b.ne ,next)
-             `(label ,body-tag)
+         (for ([e e]
+               [body body])
+           (define-label body-tag next)
+           (Expr e)
+           (emit-is-x0-equal-to (immediate-rep #t))
+           (emit `(b.ne ,next))
+           (define body-block (new-block body-tag))
+           (parameterize ([current-block body-block])
              (Expr body)
-             `(b ,end)
-             `(label ,next)))
-          (list `(label ,end)))]
+             (emit `(b ,end)))
+           (current-block (new-block next)))
+         (define end-block (new-block end))
+         (current-block end-block)]
         [(if ,e0 ,e1 ,e2)
          (define-label if-true end)
-         (list (Expr e0)
-               (emit-is-x0-equal-to (immediate-rep #t))
-               `(b.eq ,if-true)
-               (Expr e2)
-               `(b ,end)
-               `(label ,if-true)
-               (Expr e1)
-               `(label ,end))]
+         (Expr e0)
+         (emit-is-x0-equal-to (immediate-rep #t))
+         (emit `(b.eq ,if-true))
+         (Expr e2)
+         (emit `(b ,end))
+         (define if-true-block (new-block if-true))
+         (parameterize ([current-block if-true-block])
+           (Expr e1))
+         (define end-block (new-block end))
+         (current-block end-block)]
         [(prim ,op ,e1 ...)
          (case op
            [(cons) (match-define (list e-car e-cdr) e1)
-                   (list (Expr-on-offset e-cdr wordsize)
-                         `(mov x1 x0)
-                         (Expr e-car)
-                         `(stp x29 x30 [sp 8])
-                         `(bl __scheme_cons)
-                         `(ldp x29 x30 [sp 8]))]
-           [(add1 sub1) (list (Expr (car e1))
-                              (case op
-                                [(add1) `(add x0 x0 ,(immediate-rep 1))]
-                                [(sub1) `(sub x0 x0 ,(immediate-rep 1))]))]
-           [(+ - * /) (list
-                       (Expr (car e1))
-                       `(str x0 [sp ,stack-index])
-                       (for/list ([v (cdr e1)])
-                         (set! stack-index (- stack-index wordsize))
-                         (define e (Expr v))
-                         (set! stack-index (+ stack-index wordsize))
-                         (list e
-                               `(ldr x1 [sp ,stack-index])
-                               (case op
-                                 [(+) `(add x1 x1 x0)]
-                                 [(-) `(sub x1 x1 x0)]
-                                 [(*) (list `(lsr x0 x0 ,fixnum-shift)
-                                            `(mul x1 x1 x0))]
-                                 [(/) (list `(lsr x0 x0 ,fixnum-shift)
-                                            `(sdiv x1 x1 x0))])
-                               `(str x1 [sp ,stack-index])))
-                       `(ldr x0 [sp ,stack-index]))]
+                   (Expr-on-offset e-cdr wordsize)
+                   (emit `(mov x1 x0))
+                   (Expr e-car)
+                   (emit `(stp x29 x30 [sp 8]))
+                   (emit `(bl __scheme_cons))
+                   (emit `(ldp x29 x30 [sp 8]))]
+           [(add1 sub1) (Expr (car e1))
+                        (case op
+                          [(add1) (emit `(add x0 x0 ,(immediate-rep 1)))]
+                          [(sub1) (emit `(sub x0 x0 ,(immediate-rep 1)))])]
+           [(+ - * /) (Expr (car e1))
+                      (emit `(str x0 [sp ,stack-index]))
+                      (for ([v (cdr e1)])
+                        (set! stack-index (- stack-index wordsize))
+                        (Expr v)
+                        (set! stack-index (+ stack-index wordsize))
+                        (emit `(ldr x1 [sp ,stack-index]))
+                        (case op
+                          [(+) (emit `(add x1 x1 x0))]
+                          [(-) (emit `(sub x1 x1 x0))]
+                          [(*) (emit `(lsr x0 x0 ,fixnum-shift))
+                               (emit `(mul x1 x1 x0))]
+                          [(/) (emit `(lsr x0 x0 ,fixnum-shift))
+                               (emit `(sdiv x1 x1 x0))])
+                        (emit `(str x1 [sp ,stack-index])))
+                      (emit `(ldr x0 [sp ,stack-index]))]
            [(= < > <= >= char=?)
             (define-label end)
-            (append
-             (for/list ([left e1]
-                        [right (cdr e1)])
-               (define-label if-true)
-               (list
-                (Expr left)
-                (if (eq? op 'char=?) `(lsr x0 x0 ,char-shift) '())
-                `(mov x8 x0)
-                (Expr right)
-                (if (eq? op 'char=?) `(lsr x0 x0 ,char-shift) '())
-                `(cmp x8 x0)
-                (case op
-                  [(=) `(b.eq ,if-true)]
-                  [(<) `(b.lt ,if-true)]
-                  [(>) `(b.gt ,if-true)]
-                  [(<=) `(b.le ,if-true)]
-                  [(>=) `(b.ge ,if-true)]
-                  [(char=?) `(b.eq ,if-true)])
-                `(mov x0 ,(immediate-rep #f))
-                `(b ,end)
-                `(label ,if-true)))
-             (list `(mov x0 ,(immediate-rep #t))
-                   `(label ,end)))]
+            (for ([left e1]
+                  [right (cdr e1)])
+              (define-label if-true)
+              (Expr left)
+              (when (eq? op 'char=?)
+                (emit `(lsr x0 x0 ,char-shift)))
+              `(mov x8 x0)
+              (Expr right)
+              (when (eq? op 'char=?)
+                (emit `(lsr x0 x0 ,char-shift)))
+              (emit `(cmp x8 x0))
+              (emit (case op
+                      [(=) `(b.eq ,if-true)]
+                      [(<) `(b.lt ,if-true)]
+                      [(>) `(b.gt ,if-true)]
+                      [(<=) `(b.le ,if-true)]
+                      [(>=) `(b.ge ,if-true)]
+                      [(char=?) `(b.eq ,if-true)]))
+              (emit `(mov x0 ,(immediate-rep #f)))
+              (emit `(b ,end))
+              (define if-true-block (new-block if-true))
+              (current-block if-true-block))
+            (emit `(mov x0 ,(immediate-rep #t)))
+            (define end-block (new-block end))
+            (current-block end-block)]
            [(integer? boolean? char? string? vector? zero? null? car cdr)
             (list
              (Expr (car e1))
              (case op
-               [(integer?) (list `(and x0 x0 ,fixnum-mask)
-                                 (emit-is-x0-equal-to 0))]
-               [(boolean?) (list `(and x0 x0 ,bool-mask)
-                                 (emit-is-x0-equal-to bool-tag))]
-               [(char?) (list `(and x0 x0 ,char-mask)
-                              (emit-is-x0-equal-to char-tag))]
-               [(string?) (list `(and x0 x0 ,ptr-mask)
-                                (emit-is-x0-equal-to str-tag))]
-               [(vector?) (list `(and x0 x0 ,ptr-mask)
-                                (emit-is-x0-equal-to vec-tag))]
+               [(integer?) (emit `(and x0 x0 ,fixnum-mask))
+                           (emit-is-x0-equal-to 0)]
+               [(boolean?) (emit `(and x0 x0 ,bool-mask))
+                           (emit-is-x0-equal-to bool-tag)]
+               [(char?) (emit `(and x0 x0 ,char-mask))
+                        (emit-is-x0-equal-to char-tag)]
+               [(string?) (emit `(and x0 x0 ,ptr-mask))
+                          (emit-is-x0-equal-to str-tag)]
+               [(vector?) (emit `(and x0 x0 ,ptr-mask))
+                          (emit-is-x0-equal-to vec-tag)]
                [(zero?) (emit-is-x0-equal-to 0)]
-               [(car) `(ldr x0 [x0 ,(- pair-tag)])]
-               [(cdr) `(ldr x0 [x0 ,(- wordsize pair-tag)])]
+               [(car) (emit `(ldr x0 [x0 ,(- pair-tag)]))]
+               [(cdr) (emit `(ldr x0 [x0 ,(- wordsize pair-tag)]))]
                [(null?) (emit-is-x0-equal-to pair-tag)]))]
-           [(void) `(mov x0 ,(immediate-rep (void)))]
+           [(void) (emit `(mov x0 ,(immediate-rep (void))))]
            [(and or)
             (define-label if-true end)
-            (list
-             (for/list ([v e1])
-               (list (Expr v)
-                     (case op
-                       [(and) (emit-is-x0-equal-to (immediate-rep #f))]
-                       [(or) (emit-is-x0-equal-to (immediate-rep #t))])
-                     `(b.eq ,if-true)))
-             (case op
-               [(and) `(mov x0 ,(immediate-rep #t))]
-               [(or) `(mov x0 ,(immediate-rep #f))])
-             `(b ,end)
-             `(label ,if-true)
-             (case op
-               [(and) `(mov x0 ,(immediate-rep #f))]
-               [(or) `(mov x0 ,(immediate-rep #t))])
-             `(label ,end))]
+            (for ([v e1])
+              (Expr v)
+              (case op
+                [(and) (emit-is-x0-equal-to (immediate-rep #f))]
+                [(or) (emit-is-x0-equal-to (immediate-rep #t))])
+              (emit `(b.eq ,if-true)))
+            (emit (case op
+                    [(and) `(mov x0 ,(immediate-rep #t))]
+                    [(or) `(mov x0 ,(immediate-rep #f))]))
+            (emit `(b ,end))
+            (define if-true-block (new-block if-true))
+            (parameterize ([current-block if-true-block])
+              (emit (case op
+                      [(and) `(mov x0 ,(immediate-rep #f))]
+                      [(or) `(mov x0 ,(immediate-rep #t))])))
+            (define end-block (new-block end))
+            (current-block end-block)]
            [(make-string make-vector)
-            (append
-             (match e1
-               [`(,len) (list `(mov x1 0)
-                              (Expr len))]
-               [`(,len ,fill-by) (list (Expr fill-by)
-                                       `(mov x1 x0)
-                                       (Expr len))])
-             (list `(stp x29 x30 [sp 8])
-                   `(bl ,(case op [(make-string) '__scheme_make_string] [(make-vector) '__scheme_make_vector]))
-                   `(ldp x29 x30 [sp 8])))
-            ]
+            (match e1
+              [`(,len) (emit `(mov x1 0))
+                       (Expr len)]
+              [`(,len ,fill-by) (Expr fill-by)
+                                (emit `(mov x1 x0))
+                                (Expr len)])
+            (emit `(stp x29 x30 [sp 8]))
+            (emit `(bl ,(case op [(make-string) '__scheme_make_string] [(make-vector) '__scheme_make_vector])))
+            (emit `(ldp x29 x30 [sp 8]))]
            [(string-ref vector-ref)
-            (set! stack-index (- stack-index wordsize))
-            (define e (Expr (cadr e1)))
-            (set! stack-index (+ stack-index wordsize))
-            (list
-             (Expr (car e1))
-             `(add x1 x0 ,(- wordsize (case op [(string-ref) str-tag] [(vector-ref) vec-tag])))
-             e
-             ; get index, so now index is in x0
-             ; x1 is current pointer, x1 <- x1 + x0>>shift is offset of value
-             `(add x1 x1 x0 lsr ,(case op [(string-ref) fixnum-shift] [(vector-ref) (+ fixnum-shift 2)]))
-             `(ldr x0 [x1 0])
-             (case op ; now we convert loaded char back to encoded char
-               [(string-ref) (list `(lsl x0 x0 ,char-shift)
-                                   `(orr x0 x0 ,char-tag))]
-               [else '()]))]
+            (Expr-on-offset (cadr e1) wordsize)
+            (Expr (car e1))
+            (emit `(add x1 x0 ,(- wordsize (case op [(string-ref) str-tag] [(vector-ref) vec-tag]))))
+            ; get index, so now index is in x0
+            ; x1 is current pointer, x1 <- x1 + x0>>shift is offset of value
+            `(add x1 x1 x0 lsr ,(case op [(string-ref) fixnum-shift] [(vector-ref) (+ fixnum-shift 2)]))
+            `(ldr x0 [x1 0])
+            (case op ; now we convert loaded char back to encoded char
+              [(string-ref) (emit `(lsl x0 x0 ,char-shift))
+                            (emit `(orr x0 x0 ,char-tag))]
+              [else (void)])]
            [(string-length vector-length)
-            (list (Expr (car e1))
-                  `(sub x0 x0 ,(case op [(string-length) str-tag] [(vector-length) vec-tag]))
-                  `(ldr x0 [x0 0])
-                  `(lsl x0 x0 ,fixnum-shift))])]
+            (Expr (car e1))
+            (emit `(sub x0 x0 ,(case op [(string-length) str-tag] [(vector-length) vec-tag])))
+            (emit `(ldr x0 [x0 0]))
+            (emit `(lsl x0 x0 ,fixnum-shift))])]
         [(,e0 ,e1 ...)
-         `(comment "todo function call")])
+         `(comment "todo: function call")])
   (Expr e))
 
-(define (compile-expr scm-exp stack-index)
-  (flatten-arm64 (compile-scm scm-exp stack-index)))
+(define current-program (new program%))
+(define (new-block name)
+  (define b (new block% [name name]))
+  (send current-program append-block b)
+  b)
 
-(define (compile-program e)
-  (emit-program (compile-expr (E e) (- wordsize))))
+(define (compile-program scm-exp)
+  (define scheme-entry-block (new block% [name '_scheme_entry]))
+  (send current-program append-block scheme-entry-block)
+  (parameterize ([current-block scheme-entry-block])
+    (compile-scm (E scm-exp) (- wordsize)))
+  (send current-program emit-asm))
 
 (define (compile-to-binary program)
   (with-output-to-file "/tmp/scheme.s"
