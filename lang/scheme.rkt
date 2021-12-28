@@ -8,10 +8,12 @@
 (define-language scm
   (terminals (symbol [name])
              (constant [c])
-             (vector [v]))
+             (vector [v])
+             (string [s]))
   (Expr [e body]
         c
         v
+        s
         name
         (define name e)
         (begin e* ... e)
