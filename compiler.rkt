@@ -100,6 +100,18 @@
                `(label ,end))]
         [(prim ,op ,e1 ...)
          (case op
+           [(vector) (define vs e1)
+                     (list `(mov x0 ,(* (add1 (length vs)) wordsize))
+                           `(call _GC_malloc)
+                           `(mov x27 x0)
+                           `(mov x0 ,(length vs))
+                           `(str x0 [x27 0])
+                           `(orr x1 x27 ,vec-tag)
+                           (for/list ([v vs]
+                                      [i (range (length vs))])
+                             (list (Expr v)
+                                   `(str x0 [x27 ,(* (add1 i) wordsize)])))
+                           `(mov x0 x1))]
            [(cons) (match-define (list e-car e-cdr) e1)
                    (list (Expr-on-offset e-cdr wordsize)
                          `(mov x1 x0)
