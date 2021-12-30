@@ -98,6 +98,25 @@
                `(label ,if-true)
                (Expr e1)
                `(label ,end))]
+        [(make-closure (lifted-lambda (,name* ...) ,body)
+                       ,e1)
+         #| first we generate lifted lambda definition block
+            notice that we cannot append this block directly on to _scheme_entry!
+         |#
+         ; FIXME: introduce a machinary to insert this into generated assembly file
+         (define lifted-lambda-name (gensym 'lifted-lambda))
+         (list `(label ,lifted-lambda-name)
+               )
+         #| here we make a closure,
+            1. `e1` must be a env(encoded as vector), thus, we can directly compile it
+            2. then we should get pointer to the block we generated for lifted-lambda
+            3. call `__scheme_make_closure` function with pointer and env
+         |#
+         (list (Expr e1)
+               `(mov x1 x0)
+               ; FIXME: give me a pointer to block
+               `(mov x0 0)
+               `(call __scheme_make_closure))]
         [(prim ,op ,e1 ...)
          (case op
            [(vector) (define vs e1)
@@ -253,6 +272,13 @@
       (process "zig build run"))
     (do 'wait)
     (read stderr)))
+
+(compile-and-eval
+ '(let ([make-adder (lambda (n)
+                      (lambda (m)
+                        (+ n m)))])
+    (let ([add1 (make-adder 1)])
+      (add1 3))))
 
 (module+ test
   (require rackunit)

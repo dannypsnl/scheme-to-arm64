@@ -81,7 +81,7 @@
     ; string
     make-string string-ref string? string-length
     ; vector
-    make-vector vector-ref vector? vector-length))
+    vector make-vector vector-ref vector? vector-length))
 (define (primitive? x) (member x primitive-functions))
 (define-language scm/L4
   (extends scm/L3)
@@ -127,17 +127,20 @@
         [(,e0 ,e1 ...)
          (apply set-union (map freevars (cons e0 e1)))]
         [else (set)]))
+(define-pass replace-free : (scm/L5 Expr) (e $env fvs) -> (scm/L5 Expr) ()
+  (Expr : Expr (e) -> Expr ()
+        [,name (guard (set-member? fvs name))
+               `(prim vector-ref $env ,(index-of (set->list fvs) name))]))
 (define-pass closure-conversion : (scm/L4 Expr) (e) -> (scm/L5 Expr) ()
   (Expr : Expr (e) -> Expr ()
         [(lambda (,name* ...) ,[body])
          (define $env (gensym 'env))
          (define fvs (freevars e))
          ; convert free-vars in body by using reference to $env
-         (displayln (list e fvs))
          (if (set-empty? fvs)
              `(lifted-lambda (,name* ...) ,body)
-             `(make-closure (lifted-lambda (,name* ... ,$env) ,body)
-                            (make-env ,(set->list fvs) ...)))]))
+             `(make-closure (lifted-lambda (,name* ... ,$env) ,(replace-free body $env fvs))
+                            (prim vector ,(set->list fvs) ...)))]))
 
 (define-language scm/Final (extends scm/L5))
 (define-pass final : (scm/L5 Expr) (e) -> (scm/Final Expr) ()
