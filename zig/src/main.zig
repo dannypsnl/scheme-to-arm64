@@ -14,7 +14,7 @@ pub fn main() !void {
 }
 
 export fn _scheme_cons(car: i64, cdr: i64) callconv(.C) i64 {
-    const p: [*c]i64 = @intToPtr([*c]i64, @ptrToInt(c.GC_malloc(2 * rep.WORDSIZE)));
+    const p: [*]i64 = @intToPtr([*]i64, @ptrToInt(c.GC_malloc(2 * rep.WORDSIZE)));
     p[0] = car;
     p[1] = cdr;
     return @intCast(i64, @ptrToInt(p)) | rep.PAIR_TAG;
@@ -22,9 +22,9 @@ export fn _scheme_cons(car: i64, cdr: i64) callconv(.C) i64 {
 
 export fn _scheme_make_string(length: i64, filled_by: i64) callconv(.C) i64 {
     const len: i64 = length >> rep.FIXNUM_SHIFT;
-    const p: [*c]i64 = @intToPtr([*c]i64, @ptrToInt(c.GC_malloc(1 + @intCast(usize, @divTrunc(len, 8)))));
+    const p: [*]i64 = @intToPtr([*]i64, @ptrToInt(c.GC_malloc(1 + @intCast(usize, @divTrunc(len, 8)))));
     p[0] = len;
-    var p2: [*c]u8 = @ptrCast([*c]u8, p + 1);
+    var p2: [*]u8 = @ptrCast([*]u8, p + 1);
     var i: usize = 0;
     while (i <= len) {
         p2[i] = @intCast(u8, filled_by >> rep.CHAR_SHIFT);
@@ -35,9 +35,9 @@ export fn _scheme_make_string(length: i64, filled_by: i64) callconv(.C) i64 {
 
 export fn _scheme_make_vector(length: i64, filled_by: i64) callconv(.C) i64 {
     const len: i64 = length >> rep.FIXNUM_SHIFT;
-    const p: [*c]i64 = @intToPtr([*c]i64, @ptrToInt(c.GC_malloc(1 + @intCast(usize, len))));
+    const p: [*]i64 = @intToPtr([*]i64, @ptrToInt(c.GC_malloc(1 + @intCast(usize, len))));
     p[0] = len;
-    const p2: [*c]i64 = p + 1;
+    const p2: [*]i64 = p + 1;
     var i: usize = 0;
     while (i <= len) {
         p2[i] = filled_by;
