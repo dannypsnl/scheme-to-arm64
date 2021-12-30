@@ -1,4 +1,4 @@
-# scheme-compiler
+# scheme-to-arm64
 
 A scheme to Arm64 compiler that keep simple for teaching purpose.
 

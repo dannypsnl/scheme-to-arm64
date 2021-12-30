@@ -1,22 +1,21 @@
 const std = @import("std");
 const print = @import("std").debug.print;
-const c = @cImport({
-    @cInclude("representation.h");
-});
-const FIXNUM_MASK = c.FIXNUM_MASK;
-const FIXNUM_TAG = c.FIXNUM_TAG;
-const FIXNUM_SHIFT = c.FIXNUM_SHIFT;
-const CHAR_MASK = c.CHAR_MASK;
-const CHAR_TAG = c.CHAR_TAG;
-const CHAR_SHIFT = c.CHAR_SHIFT;
-const BOOL_MASK = c.BOOL_MASK;
-const BOOL_TAG = c.BOOL_TAG;
-const BOOL_SHIFT = c.BOOL_SHIFT;
-const PTR_MASK = c.PTR_MASK;
-const PAIR_TAG = c.PAIR_TAG;
-const VOID_TAG = c.VOID_TAG;
-const STR_TAG = c.STR_TAG;
-const VEC_TAG = c.VEC_TAG;
+pub const WORDSIZE = 8;
+pub const FIXNUM_MASK = 3;
+pub const FIXNUM_TAG = 0;
+pub const FIXNUM_SHIFT = 2;
+pub const CHAR_MASK = 0xff;
+pub const CHAR_TAG = 7;
+pub const CHAR_SHIFT = 8;
+pub const BOOL_MASK = 0xff;
+pub const BOOL_TAG = 15;
+pub const BOOL_SHIFT = 8;
+pub const PTR_MASK = 7;
+pub const PAIR_TAG = 1;
+pub const VEC_TAG = 2;
+pub const STR_TAG = 3;
+pub const VOID_TAG = 5;
+pub const CLOSURE_TAG = 6;
 
 fn putchar(x: u8) void {
     print("{c}", .{x});
