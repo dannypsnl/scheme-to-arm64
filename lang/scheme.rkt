@@ -35,7 +35,7 @@
 (define-pass wrap-begin : (scm Expr) (expr) -> (scm/L1 Expr) ()
   [Expr : Expr (expr) -> Expr ()
         [(lambda (,name* ...) ,[body*] ... ,[body])
-         `(lambda (,name* ...) `(begin ,body* ... ,body))]
+         `(lambda (,name* ...) (begin ,body* ... ,body))]
         [(let ([,name* ,[e*]] ...) ,[body*] ... ,[body])
          `(begin (define ,name* ,e*) ...
                  ,body* ... ,body)]
@@ -101,22 +101,19 @@
   (Expr [e body]
         (- (lambda (name* ...) body))
         (+ (lifted-lambda (name* ...) body)
+           ; make-closure stores function and environment
            (make-closure e0 e1)
-           (make-env )
-           )))
+           (make-env name ...))))
 (define-pass freevars : (scm/L4 Expr) (e) -> * ()
   (Expr : Expr (e) -> * ()
         [,name (set name)]
-        [,v (match-define (vector vs ...) v)
-            (apply set vs)]
         [(lambda (,name* ...) ,body)
          (set-subtract (freevars body)
-                       (apply set name*))]
+                       (list->set name*))]
         [(define ,name ,e)
          (freevars e)]
         [(begin ,e* ... ,e)
-         (set-union (apply set-union (map freevars e*))
-                    (freevars e))]
+         (apply set-union (map freevars (append e* (list e))))]
         [(if ,e0 ,e1 ,e2)
          (set-union  (freevars e0)
                      (freevars e1)
@@ -128,16 +125,19 @@
         [(prim ,op ,e* ...)
          (apply set-union (map freevars e*))]
         [(,e0 ,e1 ...)
-         (set-union (freevars e0)
-                    (apply set-union (map freevars e1)))]
+         (apply set-union (map freevars (cons e0 e1)))]
         [else (set)]))
 (define-pass closure-conversion : (scm/L4 Expr) (e) -> (scm/L5 Expr) ()
   (Expr : Expr (e) -> Expr ()
-        [(lambda (,name* ...) ,body)
+        [(lambda (,name* ...) ,[body])
          (define $env (gensym 'env))
-         (define freevars (freevars e))
+         (define fvs (freevars e))
          ; convert free-vars in body by using reference to $env
-         `(lifted-lambda (,name* ... ,$env) ,body)]))
+         (displayln (list e fvs))
+         (if (set-empty? fvs)
+             `(lifted-lambda (,name* ...) ,body)
+             `(make-closure (lifted-lambda (,name* ... ,$env) ,body)
+                            (make-env ,(set->list fvs) ...)))]))
 
 (define-language scm/Final (extends scm/L5))
 (define-pass final : (scm/L5 Expr) (e) -> (scm/Final Expr) ()
