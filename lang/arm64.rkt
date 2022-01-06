@@ -97,7 +97,7 @@
                [(mov ,dst ,v) (emit "mov ~a, ~a" dst (Value v))]
                [(cmp ,reg ,v) (emit "cmp ~a, ~a" reg (Value v))]
                [(closure-call ,reg) (emit "stp x29, x30, [sp, 8]")
-                                    (emit "bl ~a" reg)
+                                    (emit "blr ~a" reg)
                                     (emit "ldp x29, x30, [sp, 8]")]
                [(call ,label-name) (emit "stp x29, x30, [sp, 8]")
                                    (emit "bl ~a" label-name)
