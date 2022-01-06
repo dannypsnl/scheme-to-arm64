@@ -100,7 +100,7 @@
   (extends scm/L4)
   (Expr [e body]
         (- (lambda (name* ...) body))
-        (+ (lifted-lambda (name* ...) body)
+        (+ (lifted-lambda name (name* ...) body)
            ; make-closure stores function and environment
            (make-closure e0 e1)
            (make-env name ...))))
@@ -130,16 +130,22 @@
 (define-pass replace-free : (scm/L5 Expr) (e $env fvs) -> (scm/L5 Expr) ()
   (Expr : Expr (e) -> Expr ()
         [,name (guard (set-member? fvs name))
-               `(prim vector-ref $env ,(index-of (set->list fvs) name))]))
+               `(prim vector-ref ,$env ,(index-of (set->list fvs) name))]))
 (define-pass closure-conversion : (scm/L4 Expr) (e) -> (scm/L5 Expr) ()
   (Expr : Expr (e) -> Expr ()
         [(lambda (,name* ...) ,[body])
+         (define $lifted-function-name (gensym 'lifted))
          (define $env (gensym 'env))
          (define fvs (freevars e))
          ; convert free-vars in body by using reference to $env
          (if (set-empty? fvs)
-             `(lifted-lambda (,name* ...) ,body)
-             `(make-closure (lifted-lambda (,name* ... ,$env) ,(replace-free body $env fvs))
+             `(make-closure (lifted-lambda ,$lifted-function-name
+                                           (,name* ...)
+                                           ,body)
+                            (prim vector))
+             `(make-closure (lifted-lambda ,$lifted-function-name
+                                           (,name* ... ,$env)
+                                           ,(replace-free body $env fvs))
                             (prim vector ,(set->list fvs) ...)))]))
 
 (define-language scm/Final (extends scm/L5))

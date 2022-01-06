@@ -15,6 +15,7 @@
        (define label-names (gensym 'LLB)) ...)])
 
 (define wordsize 8)
+(define functions '())
 
 (define-pass compile-scm : (scm/Final Expr) (e si) -> (arm64 Instruction) ()
   (definitions
@@ -98,15 +99,25 @@
                `(label ,if-true)
                (Expr e1)
                `(label ,end))]
-        [(make-closure (lifted-lambda (,name* ...) ,body)
-                       ,e1)
+        [(make-closure (lifted-lambda ,name (,name* ...) ,body) ,e1)
          #| first we generate lifted lambda definition block
             notice that we cannot append this block directly on to _scheme_entry!
          |#
          ; FIXME: introduce a machinary to insert this into generated assembly file
-         (define lifted-lambda-name (gensym 'lifted-lambda))
-         (list `(label ,lifted-lambda-name)
-               )
+         (define lifted-lambda-name name)
+         (set! functions
+               (cons
+                (list `(global-label ,lifted-lambda-name)
+                      (parameterize ([env (make-env (make-hash))])
+                        (append
+                         (for/list ([name name*])
+                           (define var-offset stack-index)
+                           (var-set! name var-offset)
+                           (set! stack-index (- stack-index wordsize))
+                           `(str x0 [sp ,var-offset]))
+                           (list (Expr body))))
+                      `(ret))
+                functions))
          #| here we make a closure,
             1. `e1` must be a env(encoded as vector), thus, we can directly compile it
             2. then we should get pointer to the block we generated for lifted-lambda
@@ -114,8 +125,7 @@
          |#
          (list (Expr e1)
                `(mov x1 x0)
-               ; FIXME: give me a pointer to block
-               `(mov x0 0)
+               `(ldr-fn-ptr x0 ,lifted-lambda-name)
                `(call __scheme_make_closure))]
         [(prim ,op ,e1 ...)
          (case op
@@ -251,14 +261,21 @@
                   `(ldr x0 [x0 0])
                   `(lsl x0 x0 ,fixnum-shift))])]
         [(,e0 ,e1 ...)
-         `(comment "todo function call")])
+         `(comment "todo function call")
+         (list (Expr e0) ; compile a function
+               ; now assume we get a closure
+               `(ldr x1 [x0 ,0]) ; function pointer
+               `(ldr x2 [x0 ,8]) ; env
+               `(call x1))
+         ])
   (Expr e))
 
 (define (compile-expr scm-exp stack-index)
   (flatten-arm64 (compile-scm scm-exp stack-index)))
 
 (define (compile-program e)
-  (emit-program (compile-expr (E e) (- wordsize))))
+  (emit-program (compile-expr (E e) (- wordsize))
+                (flatten-arm64 functions)))
 
 (define (compile-to-binary program)
   (with-output-to-file "/tmp/scheme.s"
@@ -272,13 +289,6 @@
       (process "zig build run"))
     (do 'wait)
     (read stderr)))
-
-(compile-and-eval
- '(let ([make-adder (lambda (n)
-                      (lambda (m)
-                        (+ n m)))])
-    (let ([add1 (make-adder 1)])
-      (add1 3))))
 
 (module+ test
   (require rackunit)

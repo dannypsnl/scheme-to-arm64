@@ -45,7 +45,7 @@ export fn _scheme_make_vector(length: i64, filled_by: i64) callconv(.C) i64 {
 }
 
 export fn _scheme_make_closure(fn_pointer: i64, env: i64) callconv(.C) i64 {
-    const p: [2]i64 = @intToPtr([2]i64, @ptrToInt(c.GC_malloc(2 * rep.WORDSIZE)));
+    const p: [*]i64 = @intToPtr([*]i64, @ptrToInt(c.GC_malloc(2 * rep.WORDSIZE)));
     p[0] = fn_pointer;
     p[1] = env;
     return @intCast(i64, @ptrToInt(p)) | rep.CLOSURE_TAG;
