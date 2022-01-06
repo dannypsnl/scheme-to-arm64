@@ -103,7 +103,6 @@
          #| first we generate lifted lambda definition block
             notice that we cannot append this block directly on to _scheme_entry!
          |#
-         ; FIXME: introduce a machinary to insert this into generated assembly file
          (define lifted-lambda-name name)
          (set! functions
                (cons
@@ -115,7 +114,7 @@
                            (var-set! name var-offset)
                            (set! stack-index (- stack-index wordsize))
                            `(str x0 [sp ,var-offset]))
-                           (list (Expr body))))
+                         (list (Expr body))))
                       `(ret))
                 functions))
          #| here we make a closure,
@@ -264,9 +263,11 @@
          `(comment "todo function call")
          (list (Expr e0) ; compile a function
                ; now assume we get a closure
+               `(sub x0 x0 ,vec-tag)
+               ; FIXME: decode x0 first
                `(ldr x1 [x0 ,0]) ; function pointer
                `(ldr x2 [x0 ,8]) ; env
-               `(call x1))
+               `(closure-call x1))
          ])
   (Expr e))
 
