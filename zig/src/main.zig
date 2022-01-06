@@ -26,9 +26,8 @@ export fn _scheme_make_string(length: i64, filled_by: i64) callconv(.C) i64 {
     p[0] = len;
     var p2: [*]u8 = @ptrCast([*]u8, p + 1);
     var i: usize = 0;
-    while (i <= len) {
+    while (i <= len) : (i += 1) {
         p2[i] = @intCast(u8, filled_by >> rep.CHAR_SHIFT);
-        i += 1;
     }
     return @intCast(i64, @ptrToInt(p)) | rep.STR_TAG;
 }
@@ -39,9 +38,8 @@ export fn _scheme_make_vector(length: i64, filled_by: i64) callconv(.C) i64 {
     p[0] = len;
     const p2: [*]i64 = p + 1;
     var i: usize = 0;
-    while (i <= len) {
+    while (i <= len) : (i += 1) {
         p2[i] = filled_by;
-        i += 1;
     }
     return @intCast(i64, @ptrToInt(p)) | rep.VEC_TAG;
 }

@@ -41,4 +41,6 @@ You're assume to familiar with arm64's assembly to contribute. A good start is:
 Compiler reference:
 
 - [An Incremental Approach to Compiler Construction](http://scheme2006.cs.uchicago.edu/11-ghuloum.pdf)
-- [Andy Keep - Writing a Nanopass Compiler](https://youtu.be/Os7FE3J-U5Q)
+- Andy Keep - Writing a Nanopass Compiler
+  - [video](https://youtu.be/Os7FE3J-U5Q)
+  - [code](https://github.com/akeep/scheme-to-c)
