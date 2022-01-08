@@ -96,12 +96,12 @@
                [(orr ,dst ,src ,v) (emit "orr ~a, ~a, ~a" dst src (Value v))]
                [(mov ,dst ,v) (emit "mov ~a, ~a" dst (Value v))]
                [(cmp ,reg ,v) (emit "cmp ~a, ~a" reg (Value v))]
-               [(closure-call ,reg) (emit "stp x29, x30, [sp, 8]")
+               [(closure-call ,reg) (emit "str lr, [sp, 8]")
                                     (emit "blr ~a" reg)
-                                    (emit "ldp x29, x30, [sp, 8]")]
-               [(call ,label-name) (emit "stp x29, x30, [sp, 8]")
+                                    (emit "ldr lr, [sp, 8]")]
+               [(call ,label-name) (emit "str lr, [sp, 8]")
                                    (emit "bl ~a" label-name)
-                                   (emit "ldp x29, x30, [sp, 8]")]
+                                   (emit "ldr lr, [sp, 8]")]
                [(ret) (emit "ret")]
                [(b ,label-name) (emit "b ~a" label-name)]
                [(b.eq ,label-name) (emit "b.eq ~a" label-name)]
