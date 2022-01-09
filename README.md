@@ -44,3 +44,4 @@ Compiler reference:
 - Andy Keep - Writing a Nanopass Compiler
   - [video](https://youtu.be/Os7FE3J-U5Q)
   - [code](https://github.com/akeep/scheme-to-c)
+- [Let's Build a Compiler series](https://generalproblem.net/lets_build_a_compiler/01-starting-out/)
