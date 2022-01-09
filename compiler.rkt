@@ -264,7 +264,7 @@
          `(comment "todo function call")
          (list (Expr e0) ; compile a function
                ; now assume we get a closure
-               `(sub x0 x0 ,vec-tag)
+               `(sub x0 x0 ,closure-tag)
                ; FIXME: decode x0 first
                `(ldr x1 [x0 ,0]) ; function pointer
                `(ldr x2 [x0 ,8]) ; env
