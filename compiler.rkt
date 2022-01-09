@@ -106,7 +106,8 @@
          (define lifted-lambda-name name)
          (set! functions
                (cons
-                (list `(global-label ,lifted-lambda-name)
+                (list `(comment ,(format "~a" (unparse-scm/Final e)))
+                      `(global-label ,lifted-lambda-name)
                       (parameterize ([env (make-env (make-hash))])
                         (append
                          (for/list ([name name*])

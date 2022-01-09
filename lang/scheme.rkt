@@ -1,7 +1,8 @@
 #lang nanopass
 
 (provide E
-         scm/Final)
+         scm/Final
+         unparse-scm/Final)
 
 (define (constant? x)
   (or (integer? x) (char? x) (boolean? x)))
@@ -152,6 +153,7 @@
 (define-pass final : (scm/L5 Expr) (e) -> (scm/Final Expr) ()
   [Expr : Expr (e) -> Expr ()])
 
+(define-parser parse-scm/Final scm/Final)
 (define-parser parse-scm scm)
 (define (E x)
   (foldl (lambda (f e)
