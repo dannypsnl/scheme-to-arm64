@@ -266,9 +266,11 @@
                ; now assume we get a closure
                `(sub x0 x0 ,closure-tag)
                ; FIXME: decode x0 first
-               `(ldr x1 [x0 ,0]) ; function pointer
-               `(ldr x2 [x0 ,8]) ; env
-               `(closure-call x1))
+               `(ldr x9 [x0 ,0]) ; function pointer
+               `(ldr x10 [x0 ,8]) ; env
+               (for/list ([arg e1])
+                 (Expr arg))
+               `(closure-call x9))
          ])
   (Expr e))
 
