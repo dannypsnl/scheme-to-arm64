@@ -37,6 +37,7 @@ You're assume to familiar with arm64's assembly to contribute. A good start is:
 
 - [Arm64 Assembly Language Notes](https://cit.dixie.edu/cs/2810/arm64-assembly.html)
 - [johannst/notes: Arm64](https://johannst.github.io/notes/arch/arm64.html)
+- [Hello Silicon: How to program on Apple Silicon Macs](https://github.com/below/HelloSilicon)
 
 Compiler reference:
 

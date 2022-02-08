@@ -1,7 +1,8 @@
 #lang nanopass
 
 (provide E
-         scm/Final)
+         scm/Final
+         unparse-scm/Final)
 
 (define (constant? x)
   (or (integer? x) (char? x) (boolean? x)))
@@ -17,6 +18,7 @@
         name
         (define name e)
         (begin e* ... e)
+        (lambda (name* ...) body* ... body)
         (let ([name* e*] ...) body* ... body)
         (if e0 e1)
         (if e0 e1 e2)
@@ -26,11 +28,15 @@
 (define-language scm/L1
   (extends scm)
   (Expr [e body]
-        (- (let ([name* e*] ...) body* ... body)
+        (- (lambda (name* ...) body* ... body)
+           (let ([name* e*] ...) body* ... body)
            (cond [e body* ... body] ...))
-        (+ (cond [e body] ...))))
+        (+ (lambda (name* ...) body)
+           (cond [e body] ...))))
 (define-pass wrap-begin : (scm Expr) (expr) -> (scm/L1 Expr) ()
   [Expr : Expr (expr) -> Expr ()
+        [(lambda (,name* ...) ,[body*] ... ,[body])
+         `(lambda (,name* ...) (begin ,body* ... ,body))]
         [(let ([,name* ,[e*]] ...) ,[body*] ... ,[body])
          `(begin (define ,name* ,e*) ...
                  ,body* ... ,body)]
@@ -76,7 +82,7 @@
     ; string
     make-string string-ref string? string-length
     ; vector
-    make-vector vector-ref vector? vector-length))
+    vector make-vector vector-ref vector? vector-length))
 (define (primitive? x) (member x primitive-functions))
 (define-language scm/L4
   (extends scm/L3)
@@ -91,10 +97,63 @@
             `(prim ,e0 ,e1 ...)]
            [else `(,e0 ,e1 ...)])]])
 
-(define-language scm/Final (extends scm/L4))
-(define-pass final : (scm/L4 Expr) (e) -> (scm/Final Expr) ()
+(define-language scm/L5
+  (extends scm/L4)
+  (Expr [e body]
+        (- (lambda (name* ...) body))
+        (+ (lifted-lambda name (name* ...) body)
+           ; make-closure stores function and environment
+           (make-closure e0 e1)
+           (make-env name ...))))
+(define-pass freevars : (scm/L4 Expr) (e) -> * ()
+  (Expr : Expr (e) -> * ()
+        [,name (set name)]
+        [(lambda (,name* ...) ,body)
+         (set-subtract (freevars body)
+                       (list->set name*))]
+        [(define ,name ,e)
+         (freevars e)]
+        [(begin ,e* ... ,e)
+         (apply set-union (map freevars (append e* (list e))))]
+        [(if ,e0 ,e1 ,e2)
+         (set-union  (freevars e0)
+                     (freevars e1)
+                     (freevars e2))]
+        [(cond [,e ,body] ...)
+         (apply set-union
+                (append (map freevars e)
+                        (map freevars body)))]
+        [(prim ,op ,e* ...)
+         (apply set-union (map freevars e*))]
+        [(,e0 ,e1 ...)
+         (apply set-union (map freevars (cons e0 e1)))]
+        [else (set)]))
+(define-pass replace-free : (scm/L5 Expr) (e $env fvs) -> (scm/L5 Expr) ()
+  (Expr : Expr (e) -> Expr ()
+        [,name (guard (set-member? fvs name))
+               `(prim vector-ref ,$env ,(index-of (set->list fvs) name))]))
+(define-pass closure-conversion : (scm/L4 Expr) (e) -> (scm/L5 Expr) ()
+  (Expr : Expr (e) -> Expr ()
+        [(lambda (,name* ...) ,[body])
+         (define $lifted-function-name (gensym 'lifted))
+         (define $env (gensym 'env))
+         (define fvs (freevars e))
+         ; convert free-vars in body by using reference to $env
+         (if (set-empty? fvs)
+             `(make-closure (lifted-lambda ,$lifted-function-name
+                                           (,name* ...)
+                                           ,body)
+                            (prim vector))
+             `(make-closure (lifted-lambda ,$lifted-function-name
+                                           (,name* ... ,$env)
+                                           ,(replace-free body $env fvs))
+                            (prim vector ,(set->list fvs) ...)))]))
+
+(define-language scm/Final (extends scm/L5))
+(define-pass final : (scm/L5 Expr) (e) -> (scm/Final Expr) ()
   [Expr : Expr (e) -> Expr ()])
 
+(define-parser parse-scm/Final scm/Final)
 (define-parser parse-scm scm)
 (define (E x)
   (foldl (lambda (f e)
@@ -104,4 +163,17 @@
                remove-if
                normalize-data
                explicit-prim-call
+               closure-conversion
                final)))
+
+(module+ test
+  (require rackunit)
+
+  (define-parser pL4 scm/L4)
+  (check-equal? (freevars (pL4 '(lambda (x) (if x y z))))
+                (set 'y 'z))
+  (check-equal? (freevars (pL4 '(lambda (x) (prim cons x y))))
+                (set 'y))
+  (check-equal? (freevars (pL4 '(lambda (x) #(x y))))
+                (set 'y))
+  )

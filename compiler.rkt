@@ -15,6 +15,7 @@
        (define label-names (gensym 'LLB)) ...)])
 
 (define wordsize 8)
+(define functions '())
 
 (define-pass compile-scm : (scm/Final Expr) (e si) -> (arm64 Instruction) ()
   (definitions
@@ -98,8 +99,48 @@
                `(label ,if-true)
                (Expr e1)
                `(label ,end))]
+        [(make-closure (lifted-lambda ,name (,name* ...) ,body) ,e1)
+         #| first we generate lifted lambda definition block
+            notice that we cannot append this block directly on to _scheme_entry!
+         |#
+         (define lifted-lambda-name name)
+         (set! functions
+               (cons
+                (list `(comment ,(format "~a" (unparse-scm/Final e)))
+                      `(global-label ,lifted-lambda-name)
+                      (parameterize ([env (make-env (make-hash))])
+                        (append
+                         (for/list ([name name*])
+                           (define var-offset stack-index)
+                           (var-set! name var-offset)
+                           (set! stack-index (- stack-index wordsize))
+                           `(str x0 [sp ,var-offset]))
+                         (list (Expr body))))
+                      `(ret))
+                functions))
+         #| here we make a closure,
+            1. `e1` must be a env(encoded as vector), thus, we can directly compile it
+            2. then we should get pointer to the block we generated for lifted-lambda
+            3. call `__scheme_make_closure` function with pointer and env
+         |#
+         (list (Expr e1)
+               `(mov x1 x0)
+               `(ldr-fn-ptr x0 ,lifted-lambda-name)
+               `(call __scheme_make_closure))]
         [(prim ,op ,e1 ...)
          (case op
+           [(vector) (define vs e1)
+                     (list `(mov x0 ,(* (add1 (length vs)) wordsize))
+                           `(call _GC_malloc)
+                           `(mov x27 x0)
+                           `(mov x0 ,(length vs))
+                           `(str x0 [x27 0])
+                           `(orr x1 x27 ,vec-tag)
+                           (for/list ([v vs]
+                                      [i (range (length vs))])
+                             (list (Expr v)
+                                   `(str x0 [x27 ,(* (add1 i) wordsize)])))
+                           `(mov x0 x1))]
            [(cons) (match-define (list e-car e-cdr) e1)
                    (list (Expr-on-offset e-cdr wordsize)
                          `(mov x1 x0)
@@ -220,14 +261,25 @@
                   `(ldr x0 [x0 0])
                   `(lsl x0 x0 ,fixnum-shift))])]
         [(,e0 ,e1 ...)
-         `(comment "todo function call")])
+         `(comment "todo function call")
+         (list (Expr e0) ; compile a function
+               ; now assume we get a closure
+               `(sub x0 x0 ,closure-tag)
+               ; FIXME: decode x0 first
+               `(ldr x9 [x0 ,0]) ; function pointer
+               `(ldr x10 [x0 ,8]) ; env
+               (for/list ([arg e1])
+                 (Expr arg))
+               `(closure-call x9))
+         ])
   (Expr e))
 
 (define (compile-expr scm-exp stack-index)
   (flatten-arm64 (compile-scm scm-exp stack-index)))
 
 (define (compile-program e)
-  (emit-program (compile-expr (E e) (- wordsize))))
+  (emit-program (compile-expr (E e) (- wordsize))
+                (flatten-arm64 functions)))
 
 (define (compile-to-binary program)
   (with-output-to-file "/tmp/scheme.s"

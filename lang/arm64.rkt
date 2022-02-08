@@ -27,11 +27,13 @@
          imme-value)
   (Instruction [inst]
                instructions ; don't directly use this, this is stands for expression that generates several instructions
+               (global-label label-name)
                (label label-name)
                (comment comment-string)
                (stp src1 src2 [dst shift])
                (ldp src1 src2 [dst shift])
                (str src [dst shift])
+               (ldr-fn-ptr reg label-name)
                (ldr dst [src shift])
                (lsr dst src imme-value)
                (lsl dst src imme-value)
@@ -44,7 +46,9 @@
                (orr dst src v)
                (mov dst v)
                (cmp reg v)
+               (closure-call reg)
                (call label-name)
+               (ret)
                (b label-name)
                (b.eq label-name)
                (b.ne label-name)
@@ -70,11 +74,16 @@
          [,reg reg]
          [,imme-value (format "#~a" imme-value)]]
   [Instruction : Instruction (i) -> * ()
+               [(global-label ,label-name) (emit ".global ~a" label-name)
+                                           (emit "~a:" label-name)]
                [(label ,label-name) (emit "~a:" label-name)]
                [(comment ,comment-string) (emit "// ~a" comment-string)]
                [(stp ,src1 ,src2 [,dst ,shift]) (emit "stp ~a, ~a, [~a, ~a]" src1 src2 dst shift)]
                [(ldp ,dst1 ,dst2 [,src ,shift]) (emit "ldp ~a, ~a, [~a, ~a]" dst1 dst2 src shift)]
                [(str ,src [,dst ,shift]) (emit "str ~a, [~a, ~a]" src dst shift)]
+               [(ldr-fn-ptr ,reg ,label-name)
+                ; pesudo command: `ldr x0, =_start` moves absolute address of `_start` to `x0`!
+                (emit "ldr ~a, =~a" reg label-name)]
                [(ldr ,dst [,src ,shift]) (emit "ldr ~a, [~a, ~a]" dst src shift)]
                [(lsr ,dst ,src ,imme-value) (emit "lsr ~a, ~a, ~a" dst src imme-value)]
                [(lsl ,dst ,src ,imme-value) (emit "lsl ~a, ~a, ~a" dst src imme-value)]
@@ -87,9 +96,13 @@
                [(orr ,dst ,src ,v) (emit "orr ~a, ~a, ~a" dst src (Value v))]
                [(mov ,dst ,v) (emit "mov ~a, ~a" dst (Value v))]
                [(cmp ,reg ,v) (emit "cmp ~a, ~a" reg (Value v))]
+               [(closure-call ,reg) (emit "str lr, [sp, 8]")
+                                    (emit "blr ~a" reg)
+                                    (emit "ldr lr, [sp, 8]")]
                [(call ,label-name) (emit "str lr, [sp, 8]")
                                    (emit "bl ~a" label-name)
                                    (emit "ldr lr, [sp, 8]")]
+               [(ret) (emit "ret")]
                [(b ,label-name) (emit "b ~a" label-name)]
                [(b.eq ,label-name) (emit "b.eq ~a" label-name)]
                [(b.ne ,label-name) (emit "b.ne ~a" label-name)]
@@ -97,16 +110,20 @@
                [(b.le ,label-name) (emit "b.le ~a" label-name)]
                [(b.gt ,label-name) (emit "b.gt ~a" label-name)]
                [(b.ge ,label-name) (emit "b.ge ~a" label-name)]])
-(define-pass emit-program : (arm64/Final Program) (p) -> * ()
-  [Program : Program (p) -> * ()
+(define-pass emit-program : (arm64/Final Program) (p funcs) -> * ()
+  (Program : Program (p) -> * ()
            [(,inst* ...)
-            (emit ".section __TEXT,__text,regular,pure_instructions")
-            (emit ".p2align 2")
-            (emit ".globl _scheme_entry")
+            (emit ".global _scheme_entry")
             (emit "_scheme_entry:")
-
             (map emit-instruction inst*)
-            (emit "ret")]])
+            (emit "ret")])
+  (F : Program (funcs) -> * ()
+     [(,inst* ...)
+      (map emit-instruction inst*)])
+  (emit ".text")
+  (emit ".p2align 2")
+  (F funcs)
+  (Program p))
 
 (define (emit . args)
   (apply printf args)

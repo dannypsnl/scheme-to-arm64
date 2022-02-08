@@ -92,6 +92,8 @@ pub fn show(x: i64) void {
                 putchar(' ');
         }
         print(")", .{});
+    } else if ((x & PTR_MASK) == CLOSURE_TAG) {
+        print("<procedure>", .{});
     } else {
         print("bad: {d}", .{x});
     }
