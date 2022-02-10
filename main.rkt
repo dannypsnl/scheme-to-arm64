@@ -2,12 +2,13 @@
 
 (module+ main
   (require racket/cmdline
-           "compiler.rkt")
+           "compiler.rkt"
+           "runtime.rkt")
 
   (define (compile-and-run program debug?)
     ; generate /tmp/scheme.s
     (compile-to-binary program)
-    (parameterize ([current-directory "./zig"])
+    (parameterize ([current-directory runtime])
       (if debug?
           (begin (system "zig build")
                  (system "lldb ./zig-out/bin/zig"))

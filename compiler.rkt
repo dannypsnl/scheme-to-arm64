@@ -5,6 +5,7 @@
 
 (require "env.rkt"
          "representation.rkt"
+         "runtime.rkt"
          "lang/scheme.rkt"
          "lang/arm64.rkt"
          syntax/parse/define)
@@ -288,7 +289,8 @@
 
 (define (compile-and-eval program)
   (compile-to-binary program)
-  (parameterize ([current-directory "./zig"])
+  (println runtime)
+  (parameterize ([current-directory runtime])
     (match-define (list stdout stdin status stderr do)
       (process "zig build run"))
     (do 'wait)
