@@ -2,16 +2,6 @@
 
 A scheme to Arm64 compiler that keep simple for teaching purpose.
 
-```shell
-racket main.rkt -e '(char=? #\c #\c)'
-```
-
-To learn more compiler options
-
-```shell
-racket main.rkt --help
-```
-
 ### Installation
 
 ```shell
@@ -21,6 +11,20 @@ cd bdwgc
 ./configure
 make -j 8
 make install
+raco exe -o scmc main.rkt
+raco distribute dist scmc
+```
+
+### Usage
+
+```shell
+scmc -e '(char=? #\c #\c)'
+```
+
+To learn more compiler options
+
+```shell
+scmc --help
 ```
 
 ### Known issues
