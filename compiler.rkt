@@ -289,7 +289,6 @@
 
 (define (compile-and-eval program)
   (compile-to-binary program)
-  (println runtime)
   (parameterize ([current-directory runtime])
     (match-define (list stdout stdin status stderr do)
       (process "zig build run"))
